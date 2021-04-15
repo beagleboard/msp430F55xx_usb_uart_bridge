@@ -1,3 +1,5 @@
+MSP430_TOOLCHAIN_PATH:=/opt/msp430-gcc
+
 OBJECTS=main.o hal.o ringbuf.o \
 driverlib/MSP430F5xx_6xx/dma.o \
 driverlib/MSP430F5xx_6xx/gpio.o \

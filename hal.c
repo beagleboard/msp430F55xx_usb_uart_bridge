@@ -94,6 +94,7 @@ void hal_init(uint32_t mclkFreq)
 
     //I2C
     GPIO_setAsInputPin(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
+    //GPIO_setAsInputPinWithPullDownResistor(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
     //GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN1 | GPIO_PIN2);
 
     //SPI, Not used by MSP430
