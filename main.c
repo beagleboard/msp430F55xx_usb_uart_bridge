@@ -357,6 +357,26 @@ int main(void)
             default:
                 break;
         }
+
+        /* Jason debug LED hack */
+        switch(rxState)
+        {
+            case STATE_PASSTHROUGH:
+                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                break;
+            case STATE_LOOK_FOR_HDLC:
+                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
+                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                break;
+            case STATE_HDLC:
+                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                break;
+            default:
+                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2|GPIO_PIN3);
+                break;
+        }
     }
 }
 
