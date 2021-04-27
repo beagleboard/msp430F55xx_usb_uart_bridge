@@ -242,14 +242,16 @@ void poll_passthrough(void)
         count = RINGBUF_receiveDataInBuffer(&uartRing, txBuffer, BUFFER_SIZE);
         sendError = USBCDC_sendData(txBuffer, count, CDC0_INTFNUM);
 
-        // Hack BEEP on "BEEP\n" in buffer. Very special case, buffer clear, over 4 characters, blah...
-	if(count > 4 && txBuffer[0] == 'B' && txBuffer[1] == 'E' && txBuffer[2] == 'E'
-			&& txBuffer[3] == 'P' && txBuffer[4] == '\n') {
-            for(int i=0; i<20; i++) {
-                GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);	
-                __delay_cycles(10000);
-                GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
-                __delay_cycles(10000);
+        // Hack BEEP on BEL (7) in buffer.
+	for(int i=0; i<count; i++) {
+            if(txBuffer[i] == 7) {
+                for(int i=0; i<20; i++) {
+                    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+                    __delay_cycles(10000);
+                    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+                    __delay_cycles(10000);
+	        }
+		break;
 	    }
 	}
 
