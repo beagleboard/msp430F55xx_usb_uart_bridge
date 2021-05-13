@@ -39,7 +39,9 @@
 #include "driverlib.h"
 
 #include "hal.h"
-
+//*****************************************************************************
+#define SLAVE_ADDRESS 0x48
+//*****************************************************************************
 void hal_init(uint32_t mclkFreq)
 {
 #ifdef LAUNCHPAD
@@ -77,7 +79,7 @@ void hal_init(uint32_t mclkFreq)
     //Unused pins, low power state
     GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
     GPIO_setAsOutputPin(   GPIO_PORT_P1, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN0|GPIO_PIN3);
     GPIO_setAsOutputPin(   GPIO_PORT_P4, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
     GPIO_setOutputLowOnPin(GPIO_PORT_PJ, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
     GPIO_setAsOutputPin(   GPIO_PORT_PJ, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
@@ -93,6 +95,10 @@ void hal_init(uint32_t mclkFreq)
 
     //CC1352R UART
     GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN4 | GPIO_PIN5);
+
+    //I2C
+    //GPIO_setAsInputPin(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
+    // GPIO_setAsInputPinWithPullDownResistor(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
 
     //CC1352R BOOT_N - Default as input, set output low for boot operation
     GPIO_setAsInputPin(    GPIO_PORT_P4, GPIO_PIN7);
@@ -160,6 +166,27 @@ void hal_ext_uart(uint8_t active)
         USCI_A_UART_disableInterrupt(UART_BRIDGE, USCI_A_UART_RECEIVE_INTERRUPT);
     }
 }
+
+
+void hal_ext_i2c(void){
+    //Assign I2C pins to USCI_B0
+    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN1 | GPIO_PIN2);
+
+    //Initialize I2C as a slave device
+    USCI_B_I2C_initSlave(USCI_B1_BASE, SLAVE_ADDRESS);
+
+    //Set in receive mode
+    USCI_B_I2C_setMode(USCI_B1_BASE, USCI_B_I2C_RECEIVE_MODE);
+
+    //Enable I2C Module to start operations
+    USCI_B_I2C_enable(USCI_B1_BASE);
+
+    //Enable receive interrupt
+    USCI_B_I2C_clearInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT);
+    USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT );
+}
+
+
 #else
 void hal_ext_boot(uint8_t active)
 {
@@ -194,4 +221,24 @@ void hal_ext_uart(uint8_t active)
         USCI_A_UART_disableInterrupt(UART_BRIDGE, USCI_A_UART_RECEIVE_INTERRUPT);
     }
 }
+
+void hal_ext_i2c(void){
+    //Assign I2C pins to USCI_B0
+    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN1 | GPIO_PIN2);
+
+    //Initialize I2C as a slave device
+    USCI_B_I2C_initSlave(USCI_B1_BASE, SLAVE_ADDRESS);
+
+    //Set in receive mode
+    USCI_B_I2C_setMode(USCI_B1_BASE, USCI_B_I2C_RECEIVE_MODE);
+
+    //Enable I2C Module to start operations
+    USCI_B_I2C_enable(USCI_B1_BASE);
+
+    //Enable receive interrupt
+    USCI_B_I2C_clearInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT);
+    USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT );
+
+}
+
 #endif //LAUNCHPAD
