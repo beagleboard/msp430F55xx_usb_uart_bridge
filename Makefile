@@ -6,6 +6,7 @@ driverlib/MSP430F5xx_6xx/sfr.o \
 driverlib/MSP430F5xx_6xx/tlv.o \
 driverlib/MSP430F5xx_6xx/ucs.o \
 driverlib/MSP430F5xx_6xx/usci_a_uart.o \
+driverlib/MSP430F5xx_6xx/usci_b_i2c.o \
 driverlib/MSP430F5xx_6xx/crc.o \
 USB_API/USB_CDC_API/UsbCdc.o \
 USB_API/USB_WPAN_API/UsbWpan.o \
@@ -29,6 +30,7 @@ OUTHEX_LP=$(LP).hex
 MAKEFILE=Makefile
 OUTDIR=BUILD
 OUTDIR_LP=BUILD_LP
+MSP430_TOOLCHAIN_PATH=/opt/msp430-gcc
 
 ifeq ($(OS),Windows_NT)
 	ifeq ($(shell uname -o),Cygwin)
