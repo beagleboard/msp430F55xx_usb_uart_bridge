@@ -69,6 +69,16 @@
 #define CRC_DEBUG
 //#define SKIP_CRC
 
+
+#define  BUZZER_ON 0x00
+#define  BUZZER_OFF 0x01
+
+#define  LED1_ON 0x02
+#define  LED1_OFF 0x03
+
+#define  LED2_ON 0x04
+#define  LED2_OFF 0x05
+
 // Global flags set by events
 volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to
                                                // indicate data has been
@@ -269,6 +279,10 @@ int main(void)
     // Use Level 3 for high speed system clock
     PMM_setVCore(PMM_CORE_LEVEL_3);
     hal_init(MCLK_FREQUENCY); //MCLK=SMCLK=FLL=MCLK_FREQUENCY; ACLK=REFO=32kHz
+
+    hal_ext_i2c();
+
+
     USB_setup(TRUE, TRUE); // Init USB & events; if a host is present, connect
 
     USCI_A_UART_initParam param = {0};
@@ -301,6 +315,8 @@ int main(void)
     rxState = STATE_LOOK_FOR_HDLC;
 
     uint8_t userBootNow = 1;
+
+     hal_ext_uart(TRUE);
 
     while (1)
     {
@@ -361,9 +377,9 @@ int main(void)
             case ST_PHYS_DISCONNECTED:
             case ST_ENUM_SUSPENDED:
             case ST_PHYS_CONNECTED_NOENUM_SUSP:
-                hal_ext_uart(FALSE);
-                poll_hdlc(TRUE);
-                __bis_SR_register(LPM3_bits + GIE);
+                // hal_ext_uart(FALSE);
+                // poll_hdlc(TRUE);
+                // __bis_SR_register(LPM3_bits + GIE);
                 _NOP();
                 break;
 
@@ -467,5 +483,66 @@ USCI_BRIDGE_ISR (void)
             __no_operation();
             break;
         default: break;
+    }
+}
+
+//******************************************************************************
+//
+//This is the USCI_B0 interrupt vector service routine.
+//
+//******************************************************************************
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=USCI_B1_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(USCI_B1_VECTOR)))
+#endif
+void USCI_B1_ISR (void)
+{
+    switch (__even_in_range(UCB1IV,12)){
+        case USCI_I2C_UCSTPIFG:
+            //Exit LPM0 if data was transmitted
+            __bic_SR_register_on_exit(LPM0_bits);
+            __no_operation();
+            break;
+        case USCI_I2C_UCNACKIFG:    // NAK received (master only)
+            __no_operation();
+        break;
+        //Vector 10: Data received - RXIFG
+        case USCI_I2C_UCRXIFG:
+        {
+            //Get received data
+            bytesReceived = USCI_B_I2C_slaveGetData(USCI_B1_BASE);
+            switch (bytesReceived)
+            {
+            case BUZZER_ON:
+                GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+                break;
+            case BUZZER_OFF:
+                GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
+                break;
+            case LED1_ON:
+                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
+                break;
+            case LED1_OFF:
+                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+                break;
+            case LED2_ON:
+                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                break;
+            case LED2_OFF:
+               GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                break;            
+            default:
+                break;
+            }
+            break;
+        }
+        case USCI_I2C_UCTXIFG:
+            //Transmit data
+            USCI_B_I2C_slavePutData(USCI_B1_BASE, 0xff);
+            break;
+        default:
+            break;
     }
 }
