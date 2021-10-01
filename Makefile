@@ -8,6 +8,7 @@ driverlib/MSP430F5xx_6xx/sfr.o \
 driverlib/MSP430F5xx_6xx/tlv.o \
 driverlib/MSP430F5xx_6xx/ucs.o \
 driverlib/MSP430F5xx_6xx/usci_a_uart.o \
+driverlib/MSP430F5xx_6xx/usci_b_i2c.o \
 driverlib/MSP430F5xx_6xx/crc.o \
 USB_API/USB_CDC_API/UsbCdc.o \
 USB_API/USB_WPAN_API/UsbWpan.o \
