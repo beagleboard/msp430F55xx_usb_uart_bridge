@@ -39,9 +39,6 @@
 #include "driverlib.h"
 
 #include "hal.h"
-//*****************************************************************************
-#define SLAVE_ADDRESS 0x48
-//*****************************************************************************
 void hal_init(uint32_t mclkFreq)
 {
 #ifdef LAUNCHPAD

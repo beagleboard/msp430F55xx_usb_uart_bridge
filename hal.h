@@ -100,4 +100,7 @@ void hal_ext_reset(uint8_t active);
 //*****************************************************************************
 void hal_ext_uart(uint8_t active);
 
+#define SLAVE_ADDRESS 0x48
+void hal_ext_i2c(void);
+
 #endif /* HAL_H_ */
