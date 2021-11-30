@@ -316,8 +316,6 @@ int main(void)
 
     uint8_t userBootNow = 1;
 
-     hal_ext_uart(TRUE);
-
     while (1)
     {
         if(bCDCBreak_event == 3) {
@@ -377,9 +375,9 @@ int main(void)
             case ST_PHYS_DISCONNECTED:
             case ST_ENUM_SUSPENDED:
             case ST_PHYS_CONNECTED_NOENUM_SUSP:
-                // hal_ext_uart(FALSE);
-                // poll_hdlc(TRUE);
-                // __bis_SR_register(LPM3_bits + GIE);
+                hal_ext_uart(FALSE);
+                poll_hdlc(TRUE);
+                __bis_SR_register(LPM3_bits + GIE);
                 _NOP();
                 break;
 
