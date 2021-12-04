@@ -103,4 +103,7 @@ void hal_ext_uart(uint8_t active);
 #define SLAVE_ADDRESS 0x04
 void hal_ext_i2c(void);
 
+void hal_ext_led(int led, int state);
+void hal_ext_buzzer(int state);
+
 #endif /* HAL_H_ */
