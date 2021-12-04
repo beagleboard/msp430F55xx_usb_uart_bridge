@@ -79,6 +79,9 @@
 #define  LED2_ON 0x04
 #define  LED2_OFF 0x05
 
+#define  LED3_ON 0x06
+#define  LED3_OFF 0x07
+
 // Global flags set by events
 volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to
                                                // indicate data has been
@@ -252,15 +255,10 @@ void poll_passthrough(void)
         count = RINGBUF_receiveDataInBuffer(&uartRing, txBuffer, BUFFER_SIZE);
         sendError = USBCDC_sendData(txBuffer, count, CDC0_INTFNUM);
 
-        // Hack BEEP on BEL (7) in buffer.
 	for(int i=0; i<count; i++) {
             if(txBuffer[i] == 7) {
-                for(int i=0; i<20; i++) {
-                    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);	
-                    __delay_cycles(10000);
-                    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
-                    __delay_cycles(10000);
-	        }
+        	// Hack BEEP on BEL (7) in buffer.
+		hal_ext_buzzer(1);
 		break;
 	    }
 	}
@@ -316,6 +314,9 @@ int main(void)
 
     uint8_t userBootNow = 1;
 
+    hal_ext_led(3, 0);
+    hal_ext_uart(FALSE);
+
     while (1)
     {
         if(bCDCBreak_event == 3) {
@@ -345,6 +346,7 @@ int main(void)
         switch (USB_getConnectionState())
         {
             case ST_ENUM_ACTIVE:
+		hal_ext_led(3, 1);
                 hal_ext_uart(TRUE);
 
                 userBootNow = hal_ext_boot_read();
@@ -375,6 +377,7 @@ int main(void)
             case ST_PHYS_DISCONNECTED:
             case ST_ENUM_SUSPENDED:
             case ST_PHYS_CONNECTED_NOENUM_SUSP:
+                hal_ext_led(3, 0);
                 hal_ext_uart(FALSE);
                 poll_hdlc(TRUE);
                 __bis_SR_register(LPM3_bits + GIE);
@@ -390,19 +393,20 @@ int main(void)
         switch(rxState)
         {
             case STATE_PASSTHROUGH:
-                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
-                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                hal_ext_led(1, 1);
+                hal_ext_led(2, 0);
                 break;
             case STATE_LOOK_FOR_HDLC:
-                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
-                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                hal_ext_led(1, 0);
+                hal_ext_led(2, 1);
                 break;
             case STATE_HDLC:
-                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
-                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+                hal_ext_led(1, 1);
+                hal_ext_led(2, 1);
                 break;
             default:
-                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2|GPIO_PIN3);
+                hal_ext_led(1, 0);
+                hal_ext_led(2, 0);
                 break;
         }
     }
@@ -514,22 +518,28 @@ void USCI_B1_ISR (void)
             switch (bytesReceived)
             {
             case BUZZER_ON:
-                GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+		hal_ext_buzzer(1);
                 break;
             case BUZZER_OFF:
-                GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
+		hal_ext_buzzer(0);
                 break;
             case LED1_ON:
-                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
+		hal_ext_led(1, 1);
                 break;
             case LED1_OFF:
-                GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+		hal_ext_led(1, 0);
                 break;
             case LED2_ON:
-                GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
+		hal_ext_led(2, 1);
                 break;
             case LED2_OFF:
-               GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+		hal_ext_led(2, 0);
+                break;            
+            case LED3_ON:
+		hal_ext_led(3, 1);
+                break;
+            case LED3_OFF:
+		hal_ext_led(3, 0);
                 break;            
             default:
                 break;

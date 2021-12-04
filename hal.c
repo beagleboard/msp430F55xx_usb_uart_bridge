@@ -80,12 +80,12 @@ void hal_init(uint32_t mclkFreq)
     GPIO_setAsOutputPin(   GPIO_PORT_P4, GPIO_PIN0);
     GPIO_setOutputLowOnPin(GPIO_PORT_PJ, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
     GPIO_setAsOutputPin(   GPIO_PORT_PJ, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN0|GPIO_PIN1);
-    GPIO_setAsOutputPin(   GPIO_PORT_P6, GPIO_PIN0|GPIO_PIN1);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN0);
+    GPIO_setAsOutputPin(   GPIO_PORT_P6, GPIO_PIN0);
 
     //LEDs
-    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2|GPIO_PIN3);
-    GPIO_setAsOutputPin(   GPIO_PORT_P6, GPIO_PIN2|GPIO_PIN3);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
+    GPIO_setAsOutputPin(   GPIO_PORT_P6, GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
 
     //Buzzer
     GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
@@ -194,7 +194,11 @@ void hal_ext_i2c(void){
     USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT );
 }
 
+void hal_ext_led(int led, int state) {
+}
 
+void hal_ext_buzzer(int state) {
+}
 #else
 void hal_ext_boot(uint8_t active)
 {
@@ -249,4 +253,56 @@ void hal_ext_i2c(void){
 
 }
 
+void hal_ext_led(int led, int state) {
+	switch(led) {
+	case 1:
+		if(state)
+               		GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+		else
+               		GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
+		break;
+	case 2:
+		if(state)
+			GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+		else
+			GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
+		break;
+	case 3:
+		/* Labeled on schematic as 900M */
+		if(state)
+			GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN1);
+		else
+			GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN1);
+		break;
+	default:
+		break;
+	}
+}
+
+void hal_ext_buzzer(int state) {
+	switch(state) {
+	case 1: /* Buzz medium */
+                for(int i=0; i<20; i++) {
+                    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+                    __delay_cycles(10000);
+                    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+                    __delay_cycles(10000);
+	        }
+		break;
+	case 0: /* Buzz short and high */
+                for(int i=0; i<5; i++) {
+                    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+                    __delay_cycles(100);
+                    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);	
+                    __delay_cycles(100);
+	        }
+		break;
+	case 3: /* On */
+		GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+		break;
+	case 2: /* Off */
+                GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
+		break;
+	}
+}
 #endif //LAUNCHPAD
