@@ -194,7 +194,11 @@ void hal_ext_i2c(void){
     USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT );
 }
 
+void hal_ext_led(int led, int state) {
+}
 
+void hal_ext_buzzer(int state) {
+}
 #else
 void hal_ext_boot(uint8_t active)
 {
