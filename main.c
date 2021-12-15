@@ -82,6 +82,13 @@
 #define  LED3_ON 0x06
 #define  LED3_OFF 0x07
 
+#define UARTMUXSEL_SET_MIKROBUS 0x08
+#define UARTMUXSEL_SET_MSP430 0x09
+#define UARTMUXSEL_GET 0x0C
+
+#define UARTMUXSEL_MODE_MIKROBUS 0x0A
+#define UARTMUXSEL_MODE_MSP430   0x0B
+
 // Global flags set by events
 volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to
                                                // indicate data has been
@@ -106,6 +113,7 @@ static uint8_t userBootState = 1;
 static volatile uint8_t usbError = 0;
 static volatile uint8_t uartError = 0;
 static volatile uint8_t uartRxOverflow = 0;
+static volatile uint8_t uartmuxState = UARTMUXSEL_MODE_MSP430;
 
 #define ADDRESS_WPAN 0x03
 #define ADDRESS_CDC  0x05
@@ -346,6 +354,8 @@ int main(void)
         switch (USB_getConnectionState())
         {
             case ST_ENUM_ACTIVE:
+                if(uartmuxState != UARTMUXSEL_MODE_MSP430)
+                    break;
 		hal_ext_led(3, 1);
                 hal_ext_uart(TRUE);
 
@@ -540,7 +550,17 @@ void USCI_B1_ISR (void)
                 break;
             case LED3_OFF:
 		hal_ext_led(3, 0);
-                break;            
+                break;
+            case UARTMUXSEL_SET_MIKROBUS:
+                uartmuxState = UARTMUXSEL_MODE_MIKROBUS;
+                hal_ext_uart(false);
+                hal_ext_led(3, 0);
+                break;
+            case UARTMUXSEL_SET_MSP430:
+                uartmuxState = UARTMUXSEL_MODE_MSP430;
+                hal_ext_uart(true);
+                hal_ext_led(3, 1);
+                break;                 
             default:
                 break;
             }
@@ -548,7 +568,11 @@ void USCI_B1_ISR (void)
         }
         case USCI_I2C_UCTXIFG:
             //Transmit data
-            USCI_B_I2C_slavePutData(USCI_B1_BASE, 0xff);
+            bytesReceived = USCI_B_I2C_slaveGetData(USCI_B1_BASE);
+            if(bytesReceived == UARTMUXSEL_GET)
+                USCI_B_I2C_slavePutData(USCI_B1_BASE, uartmuxState);
+            else
+                USCI_B_I2C_slavePutData(USCI_B1_BASE, 0xff);
             break;
         default:
             break;
