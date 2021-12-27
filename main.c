@@ -85,9 +85,15 @@
 #define UARTMUXSEL_SET_MIKROBUS 0x08
 #define UARTMUXSEL_SET_MSP430 0x09
 #define UARTMUXSEL_GET 0x0C
+#define BCF_I2CSLAVE_GET 0x0D
 
 #define UARTMUXSEL_MODE_MIKROBUS 0x0A
 #define UARTMUXSEL_MODE_MSP430   0x0B
+#define UARTMUXSEL_MODE_LOCK_MSP430   0x10
+
+#define BCF_I2CSLAVE_IDLE 0x01
+#define BCF_I2CSLAVE_UARTMUX_CHANGE 0x02
+#define BCF_I2CSLAVE_ENUMERATION_PROFILE 0x03
 
 // Global flags set by events
 volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to
@@ -114,6 +120,9 @@ static volatile uint8_t usbError = 0;
 static volatile uint8_t uartError = 0;
 static volatile uint8_t uartRxOverflow = 0;
 static volatile uint8_t uartmuxState = UARTMUXSEL_MODE_MSP430;
+static volatile uint8_t i2cSlaveState = BCF_I2CSLAVE_IDLE;
+static volatile uint8_t uartmux_lock_trigger = 1;
+static volatile uint8_t uartmux_unlock_trigger = 1;
 
 #define ADDRESS_WPAN 0x03
 #define ADDRESS_CDC  0x05
@@ -354,9 +363,26 @@ int main(void)
         switch (USB_getConnectionState())
         {
             case ST_ENUM_ACTIVE:
-                if(uartmuxState != UARTMUXSEL_MODE_MSP430)
+                uartmuxState |= UARTMUXSEL_MODE_LOCK_MSP430;
+                if((uartmuxState & 0x0F) != UARTMUXSEL_MODE_MSP430) {
+                    /*
+                     * request UART mux switch by informing CC1352.
+                     * CC1352 is configured to use the BOOT pin as 
+                     * interrupt for the I2C slave, and will read 
+                     * the I2C slave status and further queries
+                     * uartmuxState.
+                     */
+                    i2cSlaveState =  BCF_I2CSLAVE_UARTMUX_CHANGE;                    
+                    if(uartmux_lock_trigger) {
+                        hal_ext_boot(TRUE);
+                        __delay_cycles(2000);
+                        hal_ext_boot(FALSE);
+                        uartmux_lock_trigger = 0;
+                    }
                     break;
-		hal_ext_led(3, 1);
+                }
+                uartmux_unlock_trigger = 1;
+		 hal_ext_led(3, 1);
                 hal_ext_uart(TRUE);
 
                 userBootNow = hal_ext_boot_read();
@@ -388,7 +414,17 @@ int main(void)
             case ST_ENUM_SUSPENDED:
             case ST_PHYS_CONNECTED_NOENUM_SUSP:
                 hal_ext_led(3, 0);
+                i2cSlaveState =  BCF_I2CSLAVE_UARTMUX_CHANGE;
+                uartmuxState &= 0x0F;
                 hal_ext_uart(FALSE);
+                //inform CC1352 that lock is release (and swap TX/RX only if needed)
+                if(uartmux_unlock_trigger) {
+                    hal_ext_boot(TRUE);
+                    __delay_cycles(2000);
+                    hal_ext_boot(FALSE);
+                    uartmux_unlock_trigger = 0;
+                }
+                uartmux_lock_trigger = 1;
                 poll_hdlc(TRUE);
                 __bis_SR_register(LPM3_bits + GIE);
                 _NOP();
@@ -552,9 +588,11 @@ void USCI_B1_ISR (void)
 		hal_ext_led(3, 0);
                 break;
             case UARTMUXSEL_SET_MIKROBUS:
-                uartmuxState = UARTMUXSEL_MODE_MIKROBUS;
-                hal_ext_uart(false);
-                hal_ext_led(3, 0);
+                if(!(uartmuxState & UARTMUXSEL_MODE_LOCK_MSP430)) {
+                    uartmuxState = UARTMUXSEL_MODE_MIKROBUS;
+                    hal_ext_uart(false);
+                    hal_ext_led(3, 0);
+                }
                 break;
             case UARTMUXSEL_SET_MSP430:
                 uartmuxState = UARTMUXSEL_MODE_MSP430;
@@ -569,10 +607,19 @@ void USCI_B1_ISR (void)
         case USCI_I2C_UCTXIFG:
             //Transmit data
             bytesReceived = USCI_B_I2C_slaveGetData(USCI_B1_BASE);
-            if(bytesReceived == UARTMUXSEL_GET)
-                USCI_B_I2C_slavePutData(USCI_B1_BASE, uartmuxState);
-            else
-                USCI_B_I2C_slavePutData(USCI_B1_BASE, 0xff);
+            switch(bytesReceived){
+                case UARTMUXSEL_GET:
+                    USCI_B_I2C_slavePutData(USCI_B1_BASE, uartmuxState);
+                    break;
+                case BCF_I2CSLAVE_GET:
+                    USCI_B_I2C_slavePutData(USCI_B1_BASE, i2cSlaveState);
+                    i2cSlaveState = BCF_I2CSLAVE_IDLE;
+                    break;    
+                default:
+                    USCI_B_I2C_slavePutData(USCI_B1_BASE, 0xff);
+                    break;
+            }
+                
             break;
         default:
             break;
