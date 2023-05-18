@@ -51,7 +51,7 @@ uint8_t const abromDeviceDescriptor[SIZEOF_DEVICE_DESCRIPTOR] = {
     SIZEOF_DEVICE_DESCRIPTOR,               // Length of this descriptor
     DESC_TYPE_DEVICE,                       // Type code of this descriptor
     0x00, 0x02,                             // Release of USB spec
-    0xef,                                   // Device's base class code
+    0x02,                                   // Device's base class code
     0x02,                                   // Device's sub class code
     0x01,                                   // Device's protocol type code
     EP0_PACKET_SIZE,                        // End point 0's packet size
