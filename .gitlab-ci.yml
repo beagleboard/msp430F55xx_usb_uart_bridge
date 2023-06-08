@@ -1,7 +1,12 @@
 image: debian:bullseye
 
+environment:
+  - MSP430_TOOLCHAIN_PATH: "/usr/local"
+
 build:
   stage: build
+  tags:
+    - docker-aarch64
   before_script:
     - apt update && apt -y install make autoconf wget unzip
     - wget https://git.beagleboard.org/beagleconnect/msp430/msp430-gcc/-/jobs/10937/artifacts/download
