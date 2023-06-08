@@ -1,7 +1,7 @@
 image: debian:bullseye
 
 variables:
-  - MSP430_TOOLCHAIN_PATH: "/usr/local"
+  MSP430_TOOLCHAIN_PATH: "/usr/local"
 
 build:
   stage: build
