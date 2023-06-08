@@ -1,8 +1,5 @@
 image: debian:bullseye
 
-variables:
-  MSP430_TOOLCHAIN_PATH: "/usr/local"
-
 build:
   stage: build
   tags:
@@ -13,7 +10,7 @@ build:
     - unzip download
     - cp -r install/* /
   script:
-    - make
+    - make MSP430_TOOLCHAIN_PATH="/usr/local"
   artifacts:
     paths:
       - build
