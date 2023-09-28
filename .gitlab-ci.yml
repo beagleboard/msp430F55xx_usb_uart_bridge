@@ -6,11 +6,12 @@ build-on-x86:
     - docker-amd64
   before_script:
     - apt update && apt -y install make autoconf wget tar lbzip2
-    - wget https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/msp430-gcc-9.3.1.11_linux64.tar.bz2
-    - mkdir -p /tmp/msp430-gcc
-    - tar xf msp430-gcc-9.3.1.11_linux64.tar.bz2 -C /tmp/msp430-gcc
+    - wget "http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSPGCC/9_2_0_0/export/msp430-gcc-full-linux-x64-installer-9.2.0.0.run"
+    - chmod +x ./msp430-gcc-full-linux-x64-installer-9.2.0.0.run
+    - ./msp430-gcc-full-linux-x64-installer-9.2.0.0.run  --mode unattended --prefix /opt/msp430-gcc
+    - /opt/msp430-gcc/bin/msp430-elf-gcc --version
   script:
-    - make MSP430_TOOLCHAIN_PATH="/tmp/msp430-gcc/msp430-gcc-9.3.1.11_linux64"
+    - make MSP430_TOOLCHAIN_PATH="/opt/msp430-gcc"
   artifacts:
     paths:
       - build
