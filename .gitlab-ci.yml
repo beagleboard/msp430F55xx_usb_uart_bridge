@@ -14,7 +14,8 @@ build-on-x86:
     - make MSP430_TOOLCHAIN_PATH="/opt/msp430-gcc"
   artifacts:
     paths:
-      - build
+      - BUILD
+      - BUILD_LP
 
 build-on-arm:
   stage: build
@@ -29,4 +30,5 @@ build-on-arm:
     - make MSP430_TOOLCHAIN_PATH="/usr/local"
   artifacts:
     paths:
-      - build
+      - BUILD
+      - BUILD_LP
