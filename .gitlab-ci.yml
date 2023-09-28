@@ -5,7 +5,7 @@ build-on-x86:
   tags:
     - docker-amd64
   before_script:
-    - apt update && apt -y install make autoconf wget tar xz bzip2
+    - apt update && apt -y install make autoconf wget tar
     - wget https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/msp430-gcc-9.3.1.11_linux64.tar.bz2
     - mkdir -p /tmp/msp430-gcc
     - tar xf msp430-gcc-9.3.1.11_linux64.tar.bz2 -C /tmp/msp430-gcc
