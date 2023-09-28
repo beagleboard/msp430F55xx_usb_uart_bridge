@@ -26,7 +26,7 @@ build-on-arm:
     - unzip download
     - cp -r install/* /
     - wget https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/msp430-gcc-support-files-1.212.zip
-    - unzip -j ../msp430-gcc-support-files-1.212.zip -d /usr/local/include
+    - unzip -j msp430-gcc-support-files-1.212.zip -d /usr/local/include
   script:
     - make MSP430_TOOLCHAIN_PATH="/usr/local"
   artifacts:
