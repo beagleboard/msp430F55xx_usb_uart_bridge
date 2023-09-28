@@ -15,7 +15,6 @@ build-on-x86:
   artifacts:
     paths:
       - usb_uart_bridge.*
-      - usb_uart_bridge_lp.*
 
 build-on-arm:
   stage: build
@@ -31,4 +30,3 @@ build-on-arm:
   artifacts:
     paths:
       - usb_uart_bridge.*
-      - usb_uart_bridge_lp.*
