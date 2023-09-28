@@ -36,6 +36,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <msp430.h> 
 #include <string.h>
 
