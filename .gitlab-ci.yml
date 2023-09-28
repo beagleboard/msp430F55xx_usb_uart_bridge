@@ -14,8 +14,8 @@ build-on-x86:
     - make MSP430_TOOLCHAIN_PATH="/opt/msp430-gcc"
   artifacts:
     paths:
-      - BUILD
-      - BUILD_LP
+      - usb_uart_bridge.*
+      - usb_uart_bridge_lp.*
 
 build-on-arm:
   stage: build
@@ -30,5 +30,5 @@ build-on-arm:
     - make MSP430_TOOLCHAIN_PATH="/usr/local"
   artifacts:
     paths:
-      - BUILD
-      - BUILD_LP
+      - usb_uart_bridge.*
+      - usb_uart_bridge_lp.*
