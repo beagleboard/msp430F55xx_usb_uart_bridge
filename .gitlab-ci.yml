@@ -1,6 +1,6 @@
 image: debian:bullseye
 
-build-on-arm:
+build-on-x86:
   stage: build
   tags:
     - docker-amd64
