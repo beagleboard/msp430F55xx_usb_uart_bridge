@@ -82,7 +82,7 @@ endif
 GCC_DIR = $(MSP430_TOOLCHAIN_PATH)/bin
 SUPPORT_FILE_DIRECTORY = $(MSP430_TOOLCHAIN_PATH)/include
 
-INCLUDES = -I $(SUPPORT_FILE_DIRECTORY) \
+INCLUDES = \
 		   -I $(MSP430_TOOLCHAIN_PATH)/lib/gcc/msp430-elf/9.3.1/include \
 		   -I $(MSP430_TOOLCHAIN_PATH)/lib/gcc/msp430-elf/9.3.1/plugin/include/config/msp430 \
 		   -I ./driverlib/MSP430F5xx_6xx \
