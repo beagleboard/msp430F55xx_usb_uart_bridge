@@ -22,11 +22,9 @@ build-on-arm:
     - docker-aarch64
   before_script:
     - apt update && apt -y install make autoconf wget unzip
-    - wget https://git.beagleboard.org/beagleconnect/msp430/msp430-gcc/-/jobs/10937/artifacts/download
+    - wget https://git.beagleboard.org/beagleconnect/msp430/msp430-gcc/-/jobs/15752/artifacts/download
     - unzip download
     - cp -r install/* /
-    - wget https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/msp430-gcc-support-files-1.212.zip
-    - unzip -j msp430-gcc-support-files-1.212.zip -d /usr/local/include
   script:
     - make MSP430_TOOLCHAIN_PATH="/usr/local"
   artifacts:
