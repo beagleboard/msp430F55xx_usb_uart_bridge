@@ -32,7 +32,7 @@
 /* 
  * ======== usbEventHandling.c ========
  * Event-handling placeholder functions.
- * All functions are called in interrupt context.
+ * All functios are called in interrupt context.
  */
 #include "driverlib.h"
 
@@ -40,8 +40,6 @@
 #include "USB_API/USB_Common/defMSP430USB.h"
 #include "USB_config/descriptors.h"
 #include "USB_API/USB_Common/usb.h"
-
-#include "hal.h"
 
 #ifdef _CDC_
 #include "USB_API/USB_CDC_API/UsbCdc.h"
@@ -59,15 +57,8 @@
 #include "USB_API/USB_PHDC_API/UsbPHDC.h"
 #endif
 
-#ifdef _WPAN_
-#include "USB_API/USB_WPAN_API/UsbWpan.h"
-#endif
-
 //These variables are only example, they are not needed for stack
 extern volatile uint8_t bCDCDataReceived_event;    //data received event
-extern volatile uint8_t bCDCBreak_event;   //break event
-extern volatile uint8_t bWPANDataReceived_event;
-extern volatile uint8_t bUSBIE;
 
 /*
  * If this function gets executed, it's a sign that the output of the USB PLL has failed.
@@ -182,27 +173,6 @@ void USB_handlePLLStartedEvent(void)
 }
 #endif
 
-#ifdef _WPAN_
-
-uint8_t USBWPAN_handleDataReceived(void)
-{
-    bWPANDataReceived_event = TRUE;
-    bUSBIE = USBIE;
-    USBIE = 0;
-
-    return (TRUE);
-}
-
-uint8_t USBWPAN_handleDataConsumed(void)
-{
-    bWPANDataReceived_event = FALSE;
-    USBIE = bUSBIE;
-
-    return (TRUE);
-}
-
-#endif
-
 #ifdef _CDC_
 
 /*
@@ -225,6 +195,7 @@ uint8_t USBCDC_handleDataReceived (uint8_t intfNum)
  */
 uint8_t USBCDC_handleSendCompleted (uint8_t intfNum)
 {
+    //TO DO: You can place your code here
 
     return (FALSE);                             //return FALSE to go asleep after interrupt (in the case the CPU slept before
                                                 //interrupt)
@@ -257,38 +228,7 @@ uint8_t USBCDC_handleSetLineCoding (uint8_t intfNum, uint32_t lBaudrate)
  */
 uint8_t USBCDC_handleSetControlLineState (uint8_t intfNum, uint8_t lineState)
 {
-//    switch(lineState & 3) {
-//    case 3:
-//        hal_ext_uart(TRUE);
-//        break; //Do Nothing
-//    case 2:
-//        hal_ext_boot(TRUE);
-//        hal_ext_reset(TRUE);
-//        break;
-//    case 1:
-//        hal_ext_boot(TRUE);
-//        hal_ext_reset(FALSE);
-//        break;
-//    case 0:
-//        hal_ext_boot(FALSE);
-//        hal_ext_reset(FALSE);
-//        break;
-//    }
-
 	return FALSE;
-}
-
-uint8_t USBCDC_handleBreak(uint8_t intfNum, uint8_t set)
-{
-    if(set == 0) {
-        if(bCDCBreak_event == 1) {
-            bCDCBreak_event = 3;
-            return TRUE;
-        }
-    } else {
-        bCDCBreak_event |= 1;
-    }
-    return FALSE;
 }
 
 #endif //_CDC_

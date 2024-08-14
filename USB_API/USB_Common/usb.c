@@ -62,10 +62,6 @@
 #include "../USB_MSC_API/UsbMscScsi.h"
 #endif
 
-#ifdef _WPAN_
-#include "../USB_WPAN_API/UsbWpan.h"
-#endif
-
 #include "../USB_Common/UsbIsr.h"
 
 
@@ -106,6 +102,12 @@
 #define TIMER_CCTL_IFG      CCIFG
 #define TIMER_CCTL_CM       CM_1
 #define TIMER_CCR           TA1R
+
+
+#if defined(__TI_COMPILER_VERSION__)  || defined(__GNUC__)
+#define __no_init
+#define __data16
+#endif
 
 /*----------------------------------------------------------------------------+
  | Internal Variables                                                          |
@@ -321,7 +323,6 @@ extern __no_init uint8_t pbYBufferAddressEp85[EP_MAX_PACKET_SIZE];
 void CdcResetData ();
 void HidResetData ();
 void PHDCResetData();
-void WpanResetData();
 
 void USB_InitSerialStringDescriptor (void);
 void USB_initMemcpy (void);
@@ -772,7 +773,7 @@ uint8_t USB_reset ()
 
     //loop for initialization all of used enpoints
     for (i = 0;
-         i < (CDC_NUM_INTERFACES + HID_NUM_INTERFACES + MSC_NUM_INTERFACES + PHDC_NUM_INTERFACES + WPAN_NUM_INTERFACES);
+         i < (CDC_NUM_INTERFACES + HID_NUM_INTERFACES + MSC_NUM_INTERFACES + PHDC_NUM_INTERFACES);
          i++)
     {
         uint8_t edbIndex = stUsbHandle[i].edb_Index;
@@ -847,9 +848,6 @@ uint8_t USB_reset ()
 #   ifdef _PHDC_
         PHDCResetData();                     // reset CDC specific data structures
 #   endif // _PHDC_
-#   ifdef _WPAN_
-    WpanResetData();
-#   endif
 
     USBCTL = FEN;                                                                   //enable function
     USBIFG = 0;                                                                     //make sure no interrupts are pending
@@ -905,6 +903,7 @@ uint8_t USB_forceRemoteWakeup ()
         return (USB_NOT_SUSPENDED);
     }
     if (bRemoteWakeup == ENABLE){
+        volatile uint16_t i;
         USBCTL |= RWUP;                                                             //USB - Device Remote Wakeup Request - this bit
                                                                                     //is self-cleaned
         return (USB_SUCCEED);
@@ -1595,13 +1594,6 @@ uint8_t usbDecodeAndProcessUsbRequest (void)
     uint8_t bRequestType,bRequest;
     tpF lAddrOfFunction;
 
-#ifdef _VENDOR_
-    //skip the matrix and handle vendor commands directly
-    if(tSetupPacket.bmRequestType == (USB_REQ_TYPE_OUTPUT | USB_REQ_TYPE_VENDOR | USB_REQ_TYPE_DEVICE)) {
-        return usbvendorOutputRequest();
-    }
-#endif
-
     //point to beginning of the matrix
     pbUsbRequestList = (uint8_t*)&tUsbRequestList[0];
 
@@ -1746,7 +1738,7 @@ uint16_t USB_determineFreq(void){
         else if (currentFLLREFDIV == 4) {
             freq = currentFLLN * (FLLRefFreq / 12);
         }
-        else {
+        else if (currentFLLREFDIV == 5) {
             freq = currentFLLN * (FLLRefFreq / 16);
         }
     }

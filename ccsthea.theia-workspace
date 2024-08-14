@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "path": "file:///home/ayush/workspace_ccstheia"
+    },
+    {
+      "path": ""
+    }
+  ],
+  "settings": {},
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "USB_To_UART_Bridge",
+        "type": "ccs-debug",
+        "request": "launch",
+        "project": "USB_To_UART_Bridge"
+      }
+    ]
+  }
+}

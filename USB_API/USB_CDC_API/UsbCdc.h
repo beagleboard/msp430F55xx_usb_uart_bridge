@@ -84,16 +84,16 @@ extern "C"
 
 
 #ifdef _CDC_
-typedef struct {
+struct _CdcWrite {
     uint16_t nCdcBytesToSend;                       //holds counter of bytes to be sent
     uint16_t nCdcBytesToSendLeft;                   //holds counter how many bytes is still to be sent
     const uint8_t* pUsbBufferToSend;               //holds the buffer with data to be sent
     uint8_t bCurrentBufferXY;                      //is 0 if current buffer to write data is X, or 1 if current buffer is Y
     uint8_t bZeroPacketSent;                       //= FALSE;
     uint8_t last_ByteSend;
-} CdcWrite;
+} CdcWriteCtrl[CDC_NUM_INTERFACES];
 
-typedef struct {
+struct _CdcRead {
     uint8_t *pUserBuffer;                          //holds the current position of user's receiving buffer. If NULL- no receiving
                                                 //operation started
     uint8_t *pCurrentEpPos;                        //current positon to read of received data from curent EP
@@ -104,10 +104,8 @@ typedef struct {
     uint8_t * pEP2;                                //holds addr of the next EP buffer
     uint8_t nBytesInEp;                            //how many received bytes still available in current EP
     uint8_t bCurrentBufferXY;                      //indicates which buffer is used by host to transmit data via OUT endpoint3
-} CdcRead;
+} CdcReadCtrl[CDC_NUM_INTERFACES];
 
-extern CdcWrite CdcWriteCtrl[CDC_NUM_INTERFACES];
-extern CdcRead CdcReadCtrl[CDC_NUM_INTERFACES];
 #endif
 
 /*----------------------------------------------------------------------------
@@ -475,22 +473,6 @@ uint8_t USBCDC_handleSetLineCoding (uint8_t intfNum, uint32_t lBaudrate);
 //*****************************************************************************
 uint8_t USBCDC_handleSetControlLineState (uint8_t intfNum, uint8_t lineState);
 
-//*****************************************************************************
-//
-//! New Break has been Received from the Host
-//!
-//! \param intfNum is which CDC interface is being used.
-//! \param set is clear if 0, set if non-0
-//!
-//! This event indicates that a Break event has been received
-//! from the host.
-//!
-//! \return FALSE to go asleep after interrupt (in the case the CPU slept before
-//! interrupt).
-//
-//*****************************************************************************
-uint8_t USBCDC_handleBreak(uint8_t intfNum, uint8_t set);
-
 //******************************************************************************
 //
 // Close the Doxygen group.
@@ -522,11 +504,6 @@ uint8_t usbSetControlLineState(void);
  * Readout the settings (send from usb host) for the second uart
  */
 uint8_t Handler_SetLineCoding(void);
-
-/**
- * Function set Break condition
- */
-uint8_t usbSendBreak (void);
 
 #ifdef __cplusplus
 }

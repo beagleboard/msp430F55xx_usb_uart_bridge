@@ -1,474 +1,214 @@
-/*
- * BSD 3-Clause License
- * 
- * Copyright (c) 2020, Erik Larson
+/* --COPYRIGHT--,BSD
+ * Copyright (c) 2021, Texas Instruments Incorporated
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- * 
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * *  Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * *  Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * *  Neither the name of Texas Instruments Incorporated nor the names of
+ *    its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * --/COPYRIGHT--*/
+/* ****************************************************************************
+ * USB To UART Bridge
  *
- * main.c
+ * This example simply takes the input from one communication channel
+ * and sends it to the other. So if the signal is received via USB it will
+ * be sent to UART and vice versa. This demo uses CDC USB protocol, if HID or
+ * another protocol is needed then changes will need to be made to the USB
+ * functions called and included files.
  *
- *  Created on: May 7, 2020
- *      Author: Erik Larson
+ * ----------------------------------------------------------------------------
+ * Clock Configuration
+ * ----------------------------------------------------------------------------
+ * ACLK = default REFO ~32768 Hz, SMCLK = 24MHz
+ * At this speed the voltage core needs to be set to 3
+ * Clock ranges from 20Mhz to 25Mhz, lower speeds could cause data issues
  *
+ * ----------------------------------------------------------------------------
+ * Baud Rate Configuration
+ * ----------------------------------------------------------------------------
+ * Baud rate is configured in the UART.h file and can be updated by changing
+ * the appropriate constants there. More information is in the application brief.
+ *
+ * Baud rate is default configured to 9600.
+ * Baud rate ranges from 9600-11520, rates higher or lower could cause data issues
+ *
+ * ----------------------------------------------------------------------------
+ * GUI Usage
+ * ----------------------------------------------------------------------------
+ * No additional setup in the code is required for the GUI.
+ * Follow the ReadMe included in the GUI to find the setup for GUI operation.
+ * For additional details on working the GUI see the included video and application brief.
+ *
+ * ----------------------------------------------------------------------------
+ * Stand Alone Usage
+ * ----------------------------------------------------------------------------
+ * To use this as a stand alone, run the code then open 2 separate terminals (PuTTy, Docklight, etc.)
+ * Connect one to the USB COM port (USB will only appear when program starts)
+ * and the other to the UART COM port (COM ports are found in the device manager).
+ * UART terminal connection needs a baud rate of 9600. Type on the USB terminal and the result
+ * will appear on the UART terminal. Type on the UART terminal and the result will appear on the
+ * USB terminal.
+ * More information can be found in the application brief.
+ *
+ *           MSP430F5529
+ *         ---------------
+ *     /|\|               |
+ *      | |               |
+ *      --| RST           |
+ *        |               |
+ *        |   P4.4/UCA1TXD|---> USB
+ *        |   P4.5/UCA1RXD|<--- UART
+ *        |               |
+ *
+ *  Luke Ledbetter
+ *  Texas Instruments Inc.
+ *  July 2021
+ *  Built with CCS v10.3
  */
-
-#include <stdbool.h>
-#include <msp430.h> 
 #include <string.h>
 
 #include "driverlib.h"
-#include "hal.h"
 
 #include "USB_config/descriptors.h"
 #include "USB_API/USB_Common/device.h"
-#include "USB_API/USB_Common/usb.h"
-#include "USB_API/USB_CDC_API/UsbCdc.h"
-#include "USB_API/USB_WPAN_API/UsbWpan.h"
+#include "USB_API/USB_Common/usb.h"                 // USB-specific functions
+#include "USB_API/USB_CDC_API/UsbCdc.h"             // USB CDC Protocol is used
 #include "USB_app/usbConstructs.h"
 
-#include "ringbuf.h"
+/*
+ * NOTE: Modify hal.h to select a specific evaluation board and customize for
+ * your own board.
+ */
 
-#define MCLK_FREQUENCY 24000000
-
-//UART config for Baudrate 115200
-#if   MCLK_FREQUENCY == 20000000
-#define UART_PRESCALAR 173
-#define UART_FIRST_MOD   0
-#define UART_SECOND_MOD  5
-#elif MCLK_FREQUENCY == 24000000
-#define UART_PRESCALAR 208
-#define UART_FIRST_MOD   0
-#define UART_SECOND_MOD  3
-#else
-#error INVALID MCLK_FREQUENCY 
-#endif
-
-#define CRC_DEBUG
-//#define SKIP_CRC
-
-
-#define  BUZZER_ON 0x00
-#define  BUZZER_OFF 0x01
-
-#define  LED1_ON 0x02
-#define  LED1_OFF 0x03
-
-#define  LED2_ON 0x04
-#define  LED2_OFF 0x05
-
-#define  LED3_ON 0x06
-#define  LED3_OFF 0x07
-
-#define UARTMUXSEL_SET_MIKROBUS 0x08
-#define UARTMUXSEL_SET_MSP430 0x09
-#define UARTMUXSEL_GET 0x0C
-#define BCF_I2CSLAVE_GET 0x0D
-
-#define UARTMUXSEL_MODE_MIKROBUS 0x0A
-#define UARTMUXSEL_MODE_MSP430   0x0B
-#define UARTMUXSEL_MODE_LOCK_MSP430   0x10
-
-#define BCF_I2CSLAVE_IDLE 0x01
-#define BCF_I2CSLAVE_UARTMUX_CHANGE 0x02
-#define BCF_I2CSLAVE_ENUMERATION_PROFILE 0x03
-
+#include "hal.h"
+#include "UART.h"
 // Global flags set by events
-volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to
-                                               // indicate data has been
-                                               // received into USB buffer
-volatile uint8_t bCDCBreak_event = 0;             // Flag set by event handler to
-                                               // indicate break has been
-                                               // received by USB
-                                               // 0x01 for SET, 0x02 for CLEAR
-volatile uint8_t bWPANDataReceived_event = FALSE;
-volatile uint8_t bUSBIE = 0;
+volatile uint8_t bCDCDataReceived_event = FALSE;  // Flag set by event handler to 
+                                                  // indicate data has been
+                                                  // received into USB buffer
 
-#define BUFFER_SIZE 768
+#define BUFFER_SIZE 128
 
-static uint8_t rxBuffer[BUFFER_SIZE];
-static uint8_t txBuffer[BUFFER_SIZE];
+static uint8_t usbToUart[BUFFER_SIZE], uartToUsb[BUFFER_SIZE];
 
-static uint8_t uartRingBuffer[BUFFER_SIZE];
-static ringbuf_t uartRing;
 
-static uint8_t userBootState = 1;
-
-static volatile uint8_t usbError = 0;
-static volatile uint8_t uartError = 0;
-static volatile uint8_t uartRxOverflow = 0;
-static volatile uint8_t uartmuxState = UARTMUXSEL_MODE_MSP430;
-static volatile uint8_t i2cSlaveState = BCF_I2CSLAVE_IDLE;
-static volatile uint8_t uartmux_lock_trigger = 1;
-static volatile uint8_t uartmux_unlock_trigger = 1;
-
-#define ADDRESS_WPAN 0x03
-#define ADDRESS_CDC  0x05
-#define ADDRESS_HW   0x41
-
-static uint16_t bytesSent, bytesReceived;
-
-static enum _rx_state {
-    STATE_LOOK_FOR_HDLC,
-    STATE_HDLC,
-    STATE_PASSTHROUGH
-} rxState = STATE_LOOK_FOR_HDLC;
-
-void poll_hdlc(int reset)
+/*----------------------------------------------------------------------------+
+ | Main Routine                                                                |
+ +----------------------------------------------------------------------------*/
+void main (void)
 {
-    static uint8_t inEsc = FALSE;
-    static uint8_t currentAddress = 0xFF;
-    static uint16_t currentOffset = 0;
-#ifdef CRC_DEBUG
-    uint8_t CRC_DEBUG_ERROR = 0;
-#endif
-    uint16_t crc_check = 0;
-    uint16_t abort_size = 0;
+    uint16_t count;
+    uint16_t bytesSent, bytesReceived, lastCount = 0;
+    uint8_t ret;
 
-    if (reset) {
-        inEsc = FALSE;
-        currentAddress = 0xFF;
-        currentOffset = 0;
-        RINGBUF_flush(&uartRing);
-        return;
-    }
+    WDT_A_hold(WDT_A_BASE);         // Stop watchdog timer
 
-    while(!bWPANDataReceived_event && !RINGBUF_empty(&uartRing)) {
-        uint8_t c = RINGBUF_pop_unsafe(&uartRing);
-        
-        if(c == HDLC_FRAME) {
-            if(currentAddress != 0xFF) {
-#ifdef SKIP_CRC
-                crc_check = 0xf0b8;
-#else
-                CRC_setSeed(CRC_BASE, 0xffff);
-                CRC_set8BitData(CRC_BASE, currentAddress);
-                for(int i=0; i<currentOffset; i++) {
-                    CRC_set8BitData(CRC_BASE, txBuffer[i]);
-                }
-                crc_check = CRC_getResultBitsReversed(CRC_BASE);
-#endif
-                if(crc_check != 0xf0b8) {
-#ifdef CRC_DEBUG
-                    CRC_DEBUG_ERROR = 1;
-#endif
-                } else {
-                    rxState = STATE_HDLC;
-
-                    if((txBuffer[0] & 1) == 0) {
-                        //I-Frame, send S-Frame ACK
-                        USBWPAN_sendAck(currentAddress, (txBuffer[0] >> 1) & 0x7);
-                    }
-
-                    if(currentAddress == ADDRESS_WPAN) {
-                        if(USBWPAN_getInterfaceStatus(WPAN0_INTFNUM) & USBWPAN_WAITING_FOR_SEND) {
-                            USBWPAN_abortSend(&abort_size, WPAN0_INTFNUM);
-                        }
-                        USBWPAN_sendData(txBuffer+1, currentOffset-3, WPAN0_INTFNUM);
-                    }
-                    else if(currentAddress == ADDRESS_CDC) {
-                        if(USBCDC_getInterfaceStatus(CDC0_INTFNUM,&bytesSent,&bytesReceived) & USBCDC_WAITING_FOR_SEND) {
-                            USBCDC_abortSend(&abort_size, CDC0_INTFNUM);
-                        }
-                        USBCDC_sendData(txBuffer+1, currentOffset - 3, CDC0_INTFNUM);
-                    }
-                }
-            }
-
-#ifdef CRC_DEBUG
-            if (CRC_DEBUG_ERROR) {
-                USCI_A_UART_transmitData(UART_BRIDGE, HDLC_FRAME);
-                USCI_A_UART_transmitData(UART_BRIDGE, 0xEE);
-                USCI_A_UART_transmitData(UART_BRIDGE, CRC_DEBUG_ERROR);
-                USCI_A_UART_transmitData(UART_BRIDGE, currentAddress);
-                USCI_A_UART_transmitData(UART_BRIDGE, currentOffset);
-                USCI_A_UART_transmitData(UART_BRIDGE, uartError);
-                USCI_A_UART_transmitData(UART_BRIDGE, uartRxOverflow);
-                USCI_A_UART_transmitData(UART_BRIDGE, crc_check >> 8);
-                USCI_A_UART_transmitData(UART_BRIDGE, crc_check & 0xFF);
-                USCI_A_UART_transmitData(UART_BRIDGE, HDLC_FRAME);
-                uartError = 0;
-                uartRxOverflow = 0;
-            }
-#endif
-            currentOffset = 0;
-            currentAddress = 0xFF;
-        } else if(c == HDLC_ESC) {
-            inEsc = TRUE;
-        } else {
-            if(inEsc) {
-                c ^= 0x20;
-                inEsc = FALSE;
-            }
-
-            if(currentAddress == 0xFF) {
-                currentAddress = c;
-                if(currentAddress == ADDRESS_WPAN || 
-                   currentAddress == ADDRESS_CDC ||
-                   currentAddress == ADDRESS_HW) {
-                } else {
-                    currentAddress = 0xFF;
-                }
-                currentOffset = 0;
-            } else {
-                if(rxState == STATE_LOOK_FOR_HDLC && currentOffset > 10) {
-                    rxState = STATE_PASSTHROUGH;
-                    USBCDC_sendData(txBuffer, currentOffset, CDC0_INTFNUM);
-                    return;
-                }
-                else if(currentOffset < BUFFER_SIZE) {
-                    txBuffer[currentOffset] = c;
-                    currentOffset++;
-                } else {
-                    //buffer overflow
-                    currentAddress = 0xFF;
-                    currentOffset = 0;
-                }
-            }
-        }
-    }
-}
-
-void poll_passthrough(void)
-{
-    uint8_t sendError = 0;
-    uint16_t count = 0;
-
-    if (bCDCDataReceived_event){
-        bCDCDataReceived_event = FALSE;
-
-        count = USBCDC_receiveDataInBuffer((uint8_t*)rxBuffer, BUFFER_SIZE, CDC0_INTFNUM);
-
-        uint8_t *pBuffer = rxBuffer;
-        for(int i=count; i; i--) {
-            USCI_A_UART_transmitData(UART_BRIDGE, *pBuffer++);
-        }
-    }
-
-    if(!RINGBUF_empty(&uartRing) &&
-       !(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent, &bytesReceived) & USBCDC_WAITING_FOR_SEND)) {
-        count = RINGBUF_receiveDataInBuffer(&uartRing, txBuffer, BUFFER_SIZE);
-        sendError = USBCDC_sendData(txBuffer, count, CDC0_INTFNUM);
-
-	for(int i=0; i<count; i++) {
-            if(txBuffer[i] == 7) {
-        	// Hack BEEP on BEL (7) in buffer.
-		hal_ext_buzzer(1);
-		break;
-	    }
-	}
-
-        if(sendError != USBCDC_SEND_STARTED) {
-            usbError = sendError;
-            RINGBUF_flush(&uartRing);
-        }
-    }
-}
-
-int main(void)
-{
-	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
-	
-    // Use Level 3 for high speed system clock
-    PMM_setVCore(PMM_CORE_LEVEL_3);
-    hal_init(MCLK_FREQUENCY); //MCLK=SMCLK=FLL=MCLK_FREQUENCY; ACLK=REFO=32kHz
-
-    hal_ext_i2c();
-
-
-    USB_setup(TRUE, TRUE); // Init USB & events; if a host is present, connect
-
-    USCI_A_UART_initParam param = {0};
-    param.selectClockSource = USCI_A_UART_CLOCKSOURCE_SMCLK;
-    param.clockPrescalar    = UART_PRESCALAR;
-    param.firstModReg       = UART_FIRST_MOD;
-    param.secondModReg      = UART_SECOND_MOD;
-    param.parity            = USCI_A_UART_NO_PARITY;
-    param.msborLsbFirst     = USCI_A_UART_LSB_FIRST;
-    param.numberofStopBits  = USCI_A_UART_ONE_STOP_BIT;
-    param.uartMode          = USCI_A_UART_MODE;
-    param.overSampling      = USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION;
-
-    if (STATUS_FAIL == USCI_A_UART_init(UART_BRIDGE, &param)){
-        return 1;
-    }
-
-    RINGBUF_init(&uartRing, (uint8_t*)&uartRingBuffer, BUFFER_SIZE);
-
-    //Enable UART module for operation
-    USCI_A_UART_enable(UART_BRIDGE);
-
-    //Enable Receive Interrupt
-    USCI_A_UART_clearInterrupt(UART_BRIDGE, USCI_A_UART_RECEIVE_INTERRUPT);
-
-    __enable_interrupt();  // Enable interrupts globally
-
-    USCI_A_UART_enableInterrupt(UART_BRIDGE, USCI_A_UART_RECEIVE_INTERRUPT);
-
-    rxState = STATE_LOOK_FOR_HDLC;
-
-    uint8_t userBootNow = 1;
+    PMM_setVCore(PMM_CORE_LEVEL_3); // Minimum Vcore setting required for the USB API is PMM_CORE_LEVEL_2 .
+                                    // Need PMM_CORE_LEVEL_3 for 24MHz clock speed
+    USBHAL_initPorts();             // Config GPIOS for low-power (output low)
+    USBHAL_initClocks(24000000);    // Config clocks. MCLK=SMCLK=FLL=24MHz; ACLK=REFO=32kHz
+    // hal_ext_i2c();
+    USB_setup(TRUE, TRUE);          // Init USB & events; if a host is present, connect
+    UartInit();
 
     hal_ext_led(3, 0);
     hal_ext_uart(FALSE);
 
     while (1)
-    {
-        if(bCDCBreak_event == 3) {
-            //Break Set/Cleared, jump to BSL
-//            __disable_interrupt(); // disable interrupts
-//            ((void ( * )())0x1000)(); // jump to BSL
-
-            //Reset CC1352R into BSL mode
-            bCDCBreak_event = 0;
-            hal_ext_reset(TRUE);
-            hal_ext_boot(TRUE);
-            __delay_cycles(2000);
-
-            rxState = STATE_PASSTHROUGH;
-            userBootState = 1;
-            userBootNow = 1;
-            if(bWPANDataReceived_event) {
-                USBWPAN_reset(); //auto-clear flag
-            }
-            poll_hdlc(TRUE);
-
-            hal_ext_reset(FALSE);
-            __delay_cycles(60000);
-            hal_ext_boot(FALSE);
-        }
-
-        switch (USB_getConnectionState())
         {
-            case ST_ENUM_ACTIVE:
-                uartmuxState |= UARTMUXSEL_MODE_LOCK_MSP430;
-                if((uartmuxState & 0x0F) != UARTMUXSEL_MODE_MSP430) {
-                    /*
-                     * request UART mux switch by informing CC1352.
-                     * CC1352 is configured to use the BOOT pin as 
-                     * interrupt for the I2C slave, and will read 
-                     * the I2C slave status and further queries
-                     * uartmuxState.
-                     */
-                    i2cSlaveState =  BCF_I2CSLAVE_UARTMUX_CHANGE;                    
-                    if(uartmux_lock_trigger) {
-                        hal_ext_boot(TRUE);
-                        __delay_cycles(2000);
-                        hal_ext_boot(FALSE);
-                        uartmux_lock_trigger = 0;
+            if (lastCount) {
+                ret = USBCDC_sendData(uartToUsb, lastCount, CDC0_INTFNUM);
+                if (ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE) {
+                    lastCount = 0;
+                }
+            } else if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM,&bytesSent,&bytesReceived) & USBCDC_WAITING_FOR_SEND)) {
+                count = UartReceive(uartToUsb, BUFFER_SIZE);
+                ret = USBCDC_sendData(uartToUsb, count, CDC0_INTFNUM);
+                if (!(ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE)) {
+                    lastCount = count;
+                }
+            }
+
+            // Check the USB state and directly main loop accordingly
+            switch (USB_getConnectionState())
+            {
+                // This case is executed while your device is enumerated on the
+                // USB host
+                case ST_ENUM_ACTIVE:
+                    hal_ext_led(3, 1);
+                    hal_ext_uart(TRUE);
+                    // Exit LPM because of a data-receive event, and
+                    // fetch the received data
+                    if (bCDCDataReceived_event){
+
+                        // Clear flag early -- just in case execution breaks
+                        // below because of an error
+                        bCDCDataReceived_event = FALSE;
+
+                        count = USBCDC_receiveDataInBuffer(usbToUart, BUFFER_SIZE, CDC0_INTFNUM);
+                        // Count has the number of bytes received into dataBuffer
+                        if (count){
+                           //Send the count to the UART
+                           UartSend(usbToUart, count);
+                        }
                     }
                     break;
-                }
-                uartmux_unlock_trigger = 1;
-		 hal_ext_led(3, 1);
-                hal_ext_uart(TRUE);
 
-                userBootNow = hal_ext_boot_read();
+                // These cases are executed while your device is disconnected from
+                // the host (meaning, not enumerated); enumerated but suspended
+                // by the host, or connected to a powered hub without a USB host
+                // present.
+                case ST_PHYS_DISCONNECTED:
+                case ST_ENUM_SUSPENDED:
+                case ST_PHYS_CONNECTED_NOENUM_SUSP:
+                    __bis_SR_register(LPM3_bits + GIE);
+                    _NOP();
+                    break;
 
-                if(userBootState == 0 && userBootNow == 1) {
-                    //0 -> 1 transition, button released, passthrough
-                    rxState = STATE_PASSTHROUGH;
-                    if(bWPANDataReceived_event) {
-                        USBWPAN_reset(); //auto-clear flag
-                    }
-                } else if(userBootState == 1 && userBootNow == 0) {
-                    //1 -> 0 transition, button pressed, look for HDLC
-                    rxState = STATE_LOOK_FOR_HDLC;
-                }
-                userBootState = userBootNow;
+                // The default is executed for the momentary state
+                // ST_ENUM_IN_PROGRESS.  Usually, this state only last a few
+                // seconds.  Be sure not to enter LPM3 in this state; USB
+                // communication is taking place here, and therefore the mode must
+                // be LPM0 or active-CPU.
+                case ST_ENUM_IN_PROGRESS:
+                default:;
+            }
 
-                if (rxState == STATE_PASSTHROUGH) {
-                    poll_passthrough();
-                } else {
-                    // EP0 packet received, send out over UART
-                    if(bWPANDataReceived_event) {
-                        USBWPAN_sendPacket(); //auto-clear flag
-                    }
-                    poll_hdlc(FALSE);
-                }
-                break;
+        }  //while(1)
+}                               // main()
 
-            case ST_PHYS_DISCONNECTED:
-            case ST_ENUM_SUSPENDED:
-            case ST_PHYS_CONNECTED_NOENUM_SUSP:
-                hal_ext_led(3, 0);
-                i2cSlaveState =  BCF_I2CSLAVE_UARTMUX_CHANGE;
-                uartmuxState &= 0x0F;
-                hal_ext_uart(FALSE);
-                //inform CC1352 that lock is release (and swap TX/RX only if needed)
-                if(uartmux_unlock_trigger) {
-                    hal_ext_boot(TRUE);
-                    __delay_cycles(2000);
-                    hal_ext_boot(FALSE);
-                    uartmux_unlock_trigger = 0;
-                }
-                uartmux_lock_trigger = 1;
-                poll_hdlc(TRUE);
-                __bis_SR_register(LPM3_bits + GIE);
-                _NOP();
-                break;
-
-            case ST_ENUM_IN_PROGRESS:
-            default:
-                break;
-        }
-
-        /* Jason debug LED hack */
-        switch(rxState)
-        {
-            case STATE_PASSTHROUGH:
-                hal_ext_led(1, 1);
-                hal_ext_led(2, 0);
-                break;
-            case STATE_LOOK_FOR_HDLC:
-                hal_ext_led(1, 0);
-                hal_ext_led(2, 1);
-                break;
-            case STATE_HDLC:
-                hal_ext_led(1, 1);
-                hal_ext_led(2, 1);
-                break;
-            default:
-                hal_ext_led(1, 0);
-                hal_ext_led(2, 0);
-                break;
-        }
-    }
-}
-
-/*
+/*  
  * ======== UNMI_ISR ========
  */
-#if defined(__TI_COMPILER_VERSION__)
+#if defined(__TI_COMPILER_VERSION__) || (__IAR_SYSTEMS_ICC__)
 #pragma vector = UNMI_VECTOR
 __interrupt void UNMI_ISR (void)
-#elif defined(__GNUC__)
-void __attribute__((interrupt(UNMI_VECTOR))) UNMI_ISR (void)
+#elif defined(__GNUC__) && (__MSP430__)
+void __attribute__ ((interrupt(UNMI_VECTOR))) UNMI_ISR (void)
 #else
-#error Compiler not supported
+#error Compiler not found!
 #endif
 {
     switch (__even_in_range(SYSUNIV, SYSUNIV_BUSIFG ))
@@ -498,131 +238,3 @@ void __attribute__((interrupt(UNMI_VECTOR))) UNMI_ISR (void)
     }
 }
 
-#if defined(__TI_COMPILER_VERSION__)
-#if defined (BRIDGE_UART0)
-#pragma vector=USCI_A0_VECTOR
-#else
-#pragma vector=USCI_A1_VECTOR
-#endif
-__interrupt void 
-#elif defined(__GNUC__)
-  #if defined (BRIDGE_UART0)
-void __attribute__((interrupt(USCI_A0_VECTOR)))
-  #else
-void __attribute__((interrupt(USCI_A1_VECTOR))) 
-  #endif
-#else
-#error Compiler not supported
-#endif
-USCI_BRIDGE_ISR (void)
-{
-    uint8_t rx = 0;
-
-    switch (__even_in_range(UCA_BRIDGE_IV,4)){
-        //Vector 2 - RXIFG
-        case 2:
-            uartError = USCI_A_UART_queryStatusFlags(UART_BRIDGE, USCI_A_UART_FRAMING_ERROR|USCI_A_UART_OVERRUN_ERROR|USCI_A_UART_PARITY_ERROR|USCI_A_UART_RECEIVE_ERROR);
-            rx = USCI_A_UART_receiveData(UART_BRIDGE);
-
-            if(!RINGBUF_push(&uartRing, rx)) {
-                uartRxOverflow = 1;
-            }
-            //Wake up, data to process
-            __bic_SR_register_on_exit(LPM3_bits);
-            __no_operation();
-            break;
-        default: break;
-    }
-}
-
-//******************************************************************************
-//
-//This is the USCI_B0 interrupt vector service routine.
-//
-//******************************************************************************
-#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector=USCI_B1_VECTOR
-__interrupt
-#elif defined(__GNUC__)
-__attribute__((interrupt(USCI_B1_VECTOR)))
-#endif
-void USCI_B1_ISR (void)
-{
-    switch (__even_in_range(UCB1IV,12)){
-        case USCI_I2C_UCSTPIFG:
-            //Exit LPM0 if data was transmitted
-            __bic_SR_register_on_exit(LPM0_bits);
-            __no_operation();
-            break;
-        case USCI_I2C_UCNACKIFG:    // NAK received (master only)
-            __no_operation();
-        break;
-        //Vector 10: Data received - RXIFG
-        case USCI_I2C_UCRXIFG:
-        {
-            //Get received data
-            bytesReceived = USCI_B_I2C_slaveGetData(USCI_B1_BASE);
-            switch (bytesReceived)
-            {
-            case BUZZER_ON:
-		hal_ext_buzzer(1);
-                break;
-            case BUZZER_OFF:
-		hal_ext_buzzer(0);
-                break;
-            case LED1_ON:
-		hal_ext_led(1, 1);
-                break;
-            case LED1_OFF:
-		hal_ext_led(1, 0);
-                break;
-            case LED2_ON:
-		hal_ext_led(2, 1);
-                break;
-            case LED2_OFF:
-		hal_ext_led(2, 0);
-                break;            
-            case LED3_ON:
-		hal_ext_led(3, 1);
-                break;
-            case LED3_OFF:
-		hal_ext_led(3, 0);
-                break;
-            case UARTMUXSEL_SET_MIKROBUS:
-                if(!(uartmuxState & UARTMUXSEL_MODE_LOCK_MSP430)) {
-                    uartmuxState = UARTMUXSEL_MODE_MIKROBUS;
-                    hal_ext_uart(false);
-                    hal_ext_led(3, 0);
-                }
-                break;
-            case UARTMUXSEL_SET_MSP430:
-                uartmuxState = UARTMUXSEL_MODE_MSP430;
-                hal_ext_uart(true);
-                hal_ext_led(3, 1);
-                break;                 
-            default:
-                break;
-            }
-            break;
-        }
-        case USCI_I2C_UCTXIFG:
-            //Transmit data
-            bytesReceived = USCI_B_I2C_slaveGetData(USCI_B1_BASE);
-            switch(bytesReceived){
-                case UARTMUXSEL_GET:
-                    USCI_B_I2C_slavePutData(USCI_B1_BASE, uartmuxState);
-                    break;
-                case BCF_I2CSLAVE_GET:
-                    USCI_B_I2C_slavePutData(USCI_B1_BASE, i2cSlaveState);
-                    i2cSlaveState = BCF_I2CSLAVE_IDLE;
-                    break;    
-                default:
-                    USCI_B_I2C_slavePutData(USCI_B1_BASE, 0xff);
-                    break;
-            }
-                
-            break;
-        default:
-            break;
-    }
-}

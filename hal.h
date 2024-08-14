@@ -1,59 +1,57 @@
-/*
- * BSD 3-Clause License
- * 
- * Copyright (c) 2020, Erik Larson
+/* --COPYRIGHT--,BSD
+ * Copyright (c) 2016, Texas Instruments Incorporated
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * hal.h
  *
- *  Created on: May 7, 2020
- *      Author: Erik Larson
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * *  Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * *  Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * *  Neither the name of Texas Instruments Incorporated nor the names of
+ *    its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * --/COPYRIGHT--*/
+/*
+ * ======== hal.h ========
+ *
+ * Device and board specific pins need to be configured here
+ *
  */
 
-#ifndef HAL_H_
-#define HAL_H_
 
-#if defined (BRIDGE_UART0)
-#define UART_BRIDGE USCI_A0_BASE
-#define UCA_BRIDGE_IV UCA0IV
-#else
-#define UART_BRIDGE USCI_A1_BASE
-#define UCA_BRIDGE_IV UCA1IV
+/*----------------------------------------------------------------------------
+ * The following function names are deprecated.  These were updated to new 
+ * names to follow OneMCU naming convention.
+ +---------------------------------------------------------------------------*/
+
+#ifndef DEPRECATED
+#define   initPorts       USBHAL_initPorts
+#define   initClocks      USBHAL_initClocks
 #endif
 
-//*****************************************************************************
-//
-//! Initializes pins and clocks.
-//!
-//! \param mclkFreq is the desired main clock frequency.
-//
-//*****************************************************************************
-void hal_init(uint32_t mclkFreq);
+#define SLAVE_ADDRESS 0x04
+
+void USBHAL_initPorts(void);
+void USBHAL_initClocks(uint32_t mclkFreq);
+//Released_Version_5_20_06_02
 
 //*****************************************************************************
 //
@@ -100,10 +98,6 @@ void hal_ext_reset(uint8_t active);
 //*****************************************************************************
 void hal_ext_uart(uint8_t active);
 
-#define SLAVE_ADDRESS 0x04
-void hal_ext_i2c(void);
-
 void hal_ext_led(int led, int state);
-void hal_ext_buzzer(int state);
 
-#endif /* HAL_H_ */
+void hal_ext_i2c(void);
