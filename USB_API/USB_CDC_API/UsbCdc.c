@@ -61,6 +61,8 @@ extern uint16_t wUsbEventMask;
 extern void *(*USB_TX_memcpy)(void * dest, const void * source, size_t count);
 extern void *(*USB_RX_memcpy)(void * dest, const void * source, size_t count);
 
+struct CdcWrite CdcWriteCtrl[CDC_NUM_INTERFACES];
+struct CdcRead CdcReadCtrl[CDC_NUM_INTERFACES];
 
 /*----------------------------------------------------------------------------+
  | Global Variables                                                            |

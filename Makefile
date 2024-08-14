@@ -1,6 +1,11 @@
 MSP430_TOOLCHAIN_PATH:=/opt/msp430-gcc
 
-OBJECTS=main.o hal.o ringbuf.o \
+OBJECTS= \
+main.o \
+hal.o \
+ringbuf.o \
+UART.o \
+system_pre_init.o \
 driverlib/MSP430F5xx_6xx/dma.o \
 driverlib/MSP430F5xx_6xx/gpio.o \
 driverlib/MSP430F5xx_6xx/pmm.o \
@@ -10,8 +15,8 @@ driverlib/MSP430F5xx_6xx/ucs.o \
 driverlib/MSP430F5xx_6xx/usci_a_uart.o \
 driverlib/MSP430F5xx_6xx/usci_b_i2c.o \
 driverlib/MSP430F5xx_6xx/crc.o \
+driverlib/MSP430F5xx_6xx/wdt_a.o \
 USB_API/USB_CDC_API/UsbCdc.o \
-USB_API/USB_WPAN_API/UsbWpan.o \
 USB_API/USB_Common/usb.o \
 USB_API/USB_Common/usbdma.o \
 USB_app/usbConstructs.o \

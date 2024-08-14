@@ -1,1 +1,6 @@
 Debug
+/BUILD
+/BUILD_LP
+*.hex
+*.map
+*.out
