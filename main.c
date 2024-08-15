@@ -117,24 +117,25 @@ volatile uint8_t bCDCBreak_event = 0; // Flag set by event handler to
                                       // received by USB
                                       // 0x01 for SET, 0x02 for CLEAR
 
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 256
 
 static uint8_t usbToUart[BUFFER_SIZE], uartToUsb[BUFFER_SIZE];
 static uint16_t lastCount = 0;
 
+static void trigger_cc1352_bsl() {
+  // Reset CC1352R into BSL mode
+  hal_ext_reset(TRUE);
+  hal_ext_boot(TRUE);
+  __delay_cycles(2000);
+
+  hal_ext_reset(FALSE);
+  __delay_cycles(60000);
+  hal_ext_boot(FALSE);
+}
+
 static void usb_passthrough() {
   uint16_t bytesSent, count;
   uint8_t ret;
-
-  if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent, &count) &
-        USBCDC_WAITING_FOR_SEND)) {
-    lastCount += UartReceive(uartToUsb + lastCount, BUFFER_SIZE - lastCount);
-
-    ret = USBCDC_sendData(uartToUsb, lastCount, CDC0_INTFNUM);
-    if (ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE) {
-      lastCount = 0;
-    }
-  }
 
   if (bCDCDataReceived_event) {
 
@@ -147,6 +148,20 @@ static void usb_passthrough() {
     if (count) {
       // Send the count to the UART
       UartSend(usbToUart, count);
+    }
+    // Probably have more data lined up
+    if (count == BUFFER_SIZE) {
+      bCDCDataReceived_event = TRUE;
+    }
+  }
+
+  if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent, &count) &
+        USBCDC_WAITING_FOR_SEND)) {
+    lastCount += UartReceive(uartToUsb + lastCount, BUFFER_SIZE - lastCount);
+
+    ret = USBCDC_sendData(uartToUsb, lastCount, CDC0_INTFNUM);
+    if (ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE) {
+      lastCount = 0;
     }
   }
 }
@@ -171,17 +186,10 @@ void main(void) {
   hal_ext_uart(FALSE);
 
   while (1) {
+    // Handle break
     if (bCDCBreak_event == 3) {
-      // Reset CC1352R into BSL mode
       bCDCBreak_event = 0;
-      hal_ext_led(2, 1);
-      hal_ext_reset(TRUE);
-      hal_ext_boot(TRUE);
-      __delay_cycles(2000);
-
-      hal_ext_reset(FALSE);
-      __delay_cycles(60000);
-      hal_ext_boot(FALSE);
+      trigger_cc1352_bsl();
     }
 
     // Check the USB state and directly main loop accordingly
