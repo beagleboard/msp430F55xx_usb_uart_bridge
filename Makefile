@@ -171,4 +171,7 @@ $(OUTFILE_LP): ${OBJS_LP}
 	@$(ECHO) "\x1B[1;34mLinking $@\x1B[0m"
 	$(CC) $(CFLAGS_LP) $(LFLAGS_LP) $? -o $(OUTFILE_LP)
 
+compile_commands:
+	bear -- make
+
 .PHONY: all target launchpad clean debug debug_launchpad program program_launchpad require_python2

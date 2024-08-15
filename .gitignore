@@ -4,3 +4,4 @@ Debug
 *.hex
 *.map
 *.out
+/compile_commands.json
