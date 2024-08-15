@@ -41,20 +41,24 @@
 
 #include "stdint.h"
 
-//Receive Buffer Size
+// Receive Buffer Size
 #define BC_RXBUF_SIZE (128)
-//Threshold required to wake the Receive
+// Threshold required to wake the Receive
 #define BC_RX_WAKE_THRESH (1)
 
-                       // Default Baud rate set is 9600
-#define UCA1_OS   1    // 1 = oversampling mode, 0 = low-freq mode
-#define UCA1_BR0  156  // Value of UCA1BR0 register                    24MHz / 16 / 9600 (see User's Guide)
-#define UCA1_BR1  0    // Value of UCA1BR1 register
-#define UCA1_BRS  0    // Value of UCBRS field in UCA1MCTL register    Modulation UCBRSx=0, UCBRFx=4
-#define UCA1_BRF  4    // Value of UCBRF field in UCA1MCTL register
+// Default Baud rate set is 9600
+#define UCA1_OS 1 // 1 = oversampling mode, 0 = low-freq mode
+#define UCA1_BR0                                                               \
+  156 // Value of UCA1BR0 register                    24MHz / 16 / 9600 (see
+      // User's Guide)
+#define UCA1_BR1 0 // Value of UCA1BR1 register
+#define UCA1_BRS                                                               \
+  0 // Value of UCBRS field in UCA1MCTL register    Modulation UCBRSx=0,
+    // UCBRFx=4
+#define UCA1_BRF 4 // Value of UCBRF field in UCA1MCTL register
 
 void UartInit(void);
-void UartSend(uint8_t* buf, uint16_t len);
-uint16_t UartReceive(uint8_t* buf, uint16_t len);
+void UartSend(uint8_t *buf, uint16_t len);
+uint16_t UartReceive(uint8_t *buf, uint16_t len);
 
 #endif /* UART_H_ */

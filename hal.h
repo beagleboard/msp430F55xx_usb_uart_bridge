@@ -36,22 +36,21 @@
  *
  */
 
-
 /*----------------------------------------------------------------------------
- * The following function names are deprecated.  These were updated to new 
+ * The following function names are deprecated.  These were updated to new
  * names to follow OneMCU naming convention.
  +---------------------------------------------------------------------------*/
 
 #ifndef DEPRECATED
-#define   initPorts       USBHAL_initPorts
-#define   initClocks      USBHAL_initClocks
+#define initPorts USBHAL_initPorts
+#define initClocks USBHAL_initClocks
 #endif
 
 #define SLAVE_ADDRESS 0x04
 
 void USBHAL_initPorts(void);
 void USBHAL_initClocks(uint32_t mclkFreq);
-//Released_Version_5_20_06_02
+// Released_Version_5_20_06_02
 
 //*****************************************************************************
 //

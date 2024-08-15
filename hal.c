@@ -42,154 +42,153 @@
 
 #include "hal.h"
 
-#define GPIO_ALL	GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3| \
-					GPIO_PIN4|GPIO_PIN5|GPIO_PIN6|GPIO_PIN7
+#define GPIO_ALL                                                               \
+  GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5 |      \
+      GPIO_PIN6 | GPIO_PIN7
 
 /*
-* This function drives all the I/O's as output-low, to avoid floating inputs
-* (which cause extra power to be consumed).  This setting is compatible with  
- * TI FET target boards, the F5529 Launchpad, and F5529 Experimenters Board;  
- * but may not be compatible with custom hardware, which may have components  
+ * This function drives all the I/O's as output-low, to avoid floating inputs
+ * (which cause extra power to be consumed).  This setting is compatible with
+ * TI FET target boards, the F5529 Launchpad, and F5529 Experimenters Board;
+ * but may not be compatible with custom hardware, which may have components
  * attached to the I/Os that could be affected by these settings.  So if using
-* other boards, this function may need to be modified.
-*/
-void USBHAL_initPorts(void)
-{
-    //Unused pins, low power state
-    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN0);
-    GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN0);
-    GPIO_setOutputLowOnPin(GPIO_PORT_PJ, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setAsOutputPin(GPIO_PORT_PJ, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN0);
-    GPIO_setAsOutputPin(GPIO_PORT_P6, GPIO_PIN0);
+ * other boards, this function may need to be modified.
+ */
+void USBHAL_initPorts(void) {
+  // Unused pins, low power state
+  GPIO_setOutputLowOnPin(GPIO_PORT_P1,
+                         GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3);
+  GPIO_setAsOutputPin(GPIO_PORT_P1,
+                      GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3);
+  GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN0);
+  GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN0);
+  GPIO_setOutputLowOnPin(GPIO_PORT_PJ,
+                         GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3);
+  GPIO_setAsOutputPin(GPIO_PORT_PJ,
+                      GPIO_PIN0 | GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3);
+  GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN0);
+  GPIO_setAsOutputPin(GPIO_PORT_P6, GPIO_PIN0);
 
-    //LEDs
-    GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
-    GPIO_setAsOutputPin(   GPIO_PORT_P6, GPIO_PIN1|GPIO_PIN2|GPIO_PIN3);
+  // LEDs
+  GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3);
+  GPIO_setAsOutputPin(GPIO_PORT_P6, GPIO_PIN1 | GPIO_PIN2 | GPIO_PIN3);
 
-    //Buzzer
-    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
-    GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN3);
+  // Buzzer
+  GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+  GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN3);
 
-    //I2C
-    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
+  // I2C
+  GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4,
+                                             GPIO_PIN1 | GPIO_PIN2);
 
-    //SPI, Not used by MSP430
-    GPIO_setAsInputPin(GPIO_PORT_P1, GPIO_PIN4|GPIO_PIN5|GPIO_PIN6|GPIO_PIN7);
+  // SPI, Not used by MSP430
+  GPIO_setAsInputPin(GPIO_PORT_P1,
+                     GPIO_PIN4 | GPIO_PIN5 | GPIO_PIN6 | GPIO_PIN7);
 
-    //CC1352R RESET_N - Default as input, set output low for reset operation
+  // CC1352R RESET_N - Default as input, set output low for reset operation
+  GPIO_setAsInputPin(GPIO_PORT_P2, GPIO_PIN0);
+  GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
+
+  // CC1352R UART
+  GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4,
+                                             GPIO_PIN4 | GPIO_PIN5);
+
+  // I2C
+  // GPIO_setAsInputPin(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
+  //  GPIO_setAsInputPinWithPullDownResistor(    GPIO_PORT_P4,
+  //  GPIO_PIN1|GPIO_PIN2);
+
+  // CC1352R BOOT_N - Default as input, set output low for boot operation
+  GPIO_setAsInputPin(GPIO_PORT_P4, GPIO_PIN7);
+
+  GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN6 | GPIO_PIN7);
+
+  // CC1352R UART CTRL - default disconnected, HIGH to connect
+  GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN6);
+}
+
+void USBHAL_initClocks(uint32_t mclkFreq) {
+  UCS_initClockSignal(UCS_FLLREF, UCS_REFOCLK_SELECT, UCS_CLOCK_DIVIDER_1);
+
+  UCS_initClockSignal(UCS_ACLK, UCS_REFOCLK_SELECT, UCS_CLOCK_DIVIDER_1);
+
+  UCS_initFLLSettle(mclkFreq / 1000, mclkFreq / 32768);
+}
+// Released_Version_5_20_06_02
+
+void hal_ext_uart(uint8_t active) {
+  if (active) {
+    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN6);
+    USCI_A_UART_enableInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
+  } else {
+    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN6);
+    USCI_A_UART_disableInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
+  }
+}
+
+uint8_t hal_ext_boot_read(void) {
+  return GPIO_getInputPinValue(GPIO_PORT_P4, GPIO_PIN7);
+}
+
+void hal_ext_reset(uint8_t active) {
+  if (active) {
+    GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0);
+  } else {
     GPIO_setAsInputPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
+  }
+}
 
-    //CC1352R UART
-    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN4 | GPIO_PIN5);
-
-    //I2C
-    //GPIO_setAsInputPin(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
-    // GPIO_setAsInputPinWithPullDownResistor(    GPIO_PORT_P4, GPIO_PIN1|GPIO_PIN2);
-
-    //CC1352R BOOT_N - Default as input, set output low for boot operation
+void hal_ext_boot(uint8_t active) {
+  if (active) {
+    GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN7);
+  } else {
     GPIO_setAsInputPin(GPIO_PORT_P4, GPIO_PIN7);
-
-    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN6|GPIO_PIN7);
-
-    //CC1352R UART CTRL - default disconnected, HIGH to connect
-    GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN6);
-}
-
-void USBHAL_initClocks(uint32_t mclkFreq)
-{
-	UCS_initClockSignal(
-	   UCS_FLLREF,
-	   UCS_REFOCLK_SELECT,
-	   UCS_CLOCK_DIVIDER_1);
-
-	UCS_initClockSignal(
-	   UCS_ACLK,
-	   UCS_REFOCLK_SELECT,
-	   UCS_CLOCK_DIVIDER_1);
-
-    UCS_initFLLSettle(
-        mclkFreq/1000,
-        mclkFreq/32768);
-
-}
-//Released_Version_5_20_06_02
-
-void hal_ext_uart(uint8_t active)
-{
-    if(active) {
-        GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN6);
-        USCI_A_UART_enableInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
-    } else {
-        GPIO_setOutputLowOnPin( GPIO_PORT_P4, GPIO_PIN6);
-        USCI_A_UART_disableInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
-    }
-}
-
-uint8_t hal_ext_boot_read(void)
-{
-    return GPIO_getInputPinValue(GPIO_PORT_P4, GPIO_PIN7);
-}
-
-void hal_ext_reset(uint8_t active)
-{
-    if(active) {
-        GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0);
-    } else {
-        GPIO_setAsInputPin(GPIO_PORT_P2, GPIO_PIN0);
-    }
-}
-
-void hal_ext_boot(uint8_t active)
-{
-    if(active) {
-        GPIO_setAsOutputPin(GPIO_PORT_P4, GPIO_PIN7);
-    } else {
-        GPIO_setAsInputPin(GPIO_PORT_P4, GPIO_PIN7);
-    }
+  }
 }
 
 void hal_ext_led(int led, int state) {
-	switch(led) {
-	case 1:
-		if(state)
-            GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
-		else
-            GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
-		break;
-	case 2:
-		if(state)
-			GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
-		else
-			GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
-		break;
-	case 3:
-		/* Labeled on schematic as 900M */
-		if(state)
-			GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN1);
-		else
-			GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN1);
-		break;
-	}
+  switch (led) {
+  case 1:
+    if (state)
+      GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN2);
+    else
+      GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN2);
+    break;
+  case 2:
+    if (state)
+      GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN3);
+    else
+      GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN3);
+    break;
+  case 3:
+    /* Labeled on schematic as 900M */
+    if (state)
+      GPIO_setOutputHighOnPin(GPIO_PORT_P6, GPIO_PIN1);
+    else
+      GPIO_setOutputLowOnPin(GPIO_PORT_P6, GPIO_PIN1);
+    break;
+  }
 }
 
 void hal_ext_i2c(void) {
-    //Assign I2C pins to USCI_B0
-    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4, GPIO_PIN1 | GPIO_PIN2);
+  // Assign I2C pins to USCI_B0
+  GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P4,
+                                             GPIO_PIN1 | GPIO_PIN2);
 
-    //Initialize I2C as a slave device
-    USCI_B_I2C_initSlave(USCI_B1_BASE, SLAVE_ADDRESS);
+  // Initialize I2C as a slave device
+  USCI_B_I2C_initSlave(USCI_B1_BASE, SLAVE_ADDRESS);
 
-    //Set in receive mode
-    USCI_B_I2C_setMode(USCI_B1_BASE, USCI_B_I2C_RECEIVE_MODE);
+  // Set in receive mode
+  USCI_B_I2C_setMode(USCI_B1_BASE, USCI_B_I2C_RECEIVE_MODE);
 
-    //Enable I2C Module to start operations
-    USCI_B_I2C_enable(USCI_B1_BASE);
+  // Enable I2C Module to start operations
+  USCI_B_I2C_enable(USCI_B1_BASE);
 
-    //Enable receive interrupt
-    USCI_B_I2C_clearInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT);
-    USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT + USCI_B_I2C_RECEIVE_INTERRUPT + USCI_B_I2C_STOP_INTERRUPT);
+  // Enable receive interrupt
+  USCI_B_I2C_clearInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT +
+                                              USCI_B_I2C_RECEIVE_INTERRUPT +
+                                              USCI_B_I2C_STOP_INTERRUPT);
+  USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT +
+                                               USCI_B_I2C_RECEIVE_INTERRUPT +
+                                               USCI_B_I2C_STOP_INTERRUPT);
 }

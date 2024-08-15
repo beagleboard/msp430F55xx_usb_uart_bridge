@@ -30,23 +30,21 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * --/COPYRIGHT--*/
 
+/*
+ *  This file is DEPRECATED.  It is being included in the USB stack to
+ *  provide backward compatibility with MSP430USB_Developers_Package_4_00_00
+ *  and previous versions of the stack
+ *
+ */
 
 /*
-*  This file is DEPRECATED.  It is being included in the USB stack to
-*  provide backward compatibility with MSP430USB_Developers_Package_4_00_00 
-*  and previous versions of the stack 
-*
-*/
-
-/* 
  * ======== types.h ========
  */
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifdef __TI_COMPILER_VERSION__
@@ -73,14 +71,14 @@ typedef long LONG;
 typedef unsigned long ULONG;
 typedef void VOID;
 typedef unsigned long HANDLE;
-typedef char *          PSTR;
+typedef char *PSTR;
 typedef int BOOL;
 typedef double DOUBLE;
 typedef unsigned char BYTE;
-typedef unsigned char*  PBYTE;
+typedef unsigned char *PBYTE;
 typedef unsigned int WORD;
 typedef unsigned long DWORD;
-typedef unsigned long*  PDWORD;
+typedef unsigned long *PDWORD;
 
 /*----------------------------------------------------------------------------+
  | End of header file                                                          |
@@ -88,9 +86,10 @@ typedef unsigned long*  PDWORD;
 #ifdef __cplusplus
 }
 #endif
-#endif  /*
-         * _TYPES_H_
-         *------------------------ Nothing Below This Line --------------------------
-         */
+#endif /*                                                                      \
+        * _TYPES_H_                                                            \
+        *------------------------ Nothing Below This Line                      \
+        *--------------------------                                            \
+        */
 
-//Released_Version_5_20_06_02
+// Released_Version_5_20_06_02

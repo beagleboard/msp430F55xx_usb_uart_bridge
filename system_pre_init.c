@@ -49,14 +49,13 @@
 #include "msp430.h"
 #include <stdint.h>
 
-int16_t _system_pre_init(void)
-{
+int16_t _system_pre_init(void) {
   /* Insert your low-level initializations here */
 
   /* Disable Watchdog timer to prevent reset during */
   /* long variable initialization sequences. */
-  WDTCTL = WDTPW | WDTHOLD;   
-  
+  WDTCTL = WDTPW | WDTHOLD;
+
   /*==================================*/
   /* Choose if segment initialization */
   /* should be done or not.           */
@@ -65,4 +64,4 @@ int16_t _system_pre_init(void)
   /*==================================*/
   return 1;
 }
-//Released_Version_5_20_06_02
+// Released_Version_5_20_06_02

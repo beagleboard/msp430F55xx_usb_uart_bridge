@@ -35,106 +35,107 @@
  *  July 2021
  *  Built with CCS v10.3
  */
-#include <msp430.h>
 #include "UART.h"
 #include "driverlib.h"
 #include "msp430f5529.h"
 #include "ringbuf.h"
+#include <msp430.h>
 
 #define UART_PRESCALAR 208
 #define UART_FIRST_MOD 0
 #define UART_SECOND_MOD 3
 
-//Receive buffer for the uart, incoming data needs a place to go to otherwise they will be overwritten.
+// Receive buffer for the uart, incoming data needs a place to go to otherwise
+// they will be overwritten.
 static uint8_t UartRcvBuf[BC_RXBUF_SIZE];
 static ringbuf_t rx_ring;
 
-//Initializes the Uart
-void UartInit(void)
-{
-        // P4SEL |= BIT4+BIT5;                          // P4.4,5 = USCI_A1 TXD/RXD
-        // UCA1CTL1 |= UCSWRST;                         // **Put state machine in reset**
-        // UCA1CTL1 |= UCSSEL_2;                        // SMCLK
-        // UCA1BR0 = UCA1_BR0;                          // 24MHz / 16 / 9600 (see User's Guide)
-        // UCA1BR1 = UCA1_BR1;
-        // UCA1MCTL |= UCA1_OS | UCA1_BRF | UCA1_BRS;   // Modulation UCBRSx=0, UCBRFx=4
-        // UCA1CTL1 &= ~UCSWRST;                        // **Initialize USCI state machine**
-        // UCA1IE |= UCRXIE;                            // Enable USCI_A1 RX interrupt
+// Initializes the Uart
+void UartInit(void) {
+  // P4SEL |= BIT4+BIT5;                          // P4.4,5 = USCI_A1 TXD/RXD
+  // UCA1CTL1 |= UCSWRST;                         // **Put state machine in
+  // reset** UCA1CTL1 |= UCSSEL_2;                        // SMCLK UCA1BR0 =
+  // UCA1_BR0;                          // 24MHz / 16 / 9600 (see User's Guide)
+  // UCA1BR1 = UCA1_BR1;
+  // UCA1MCTL |= UCA1_OS | UCA1_BRF | UCA1_BRS;   // Modulation UCBRSx=0,
+  // UCBRFx=4 UCA1CTL1 &= ~UCSWRST;                        // **Initialize USCI
+  // state machine** UCA1IE |= UCRXIE;                            // Enable
+  // USCI_A1 RX interrupt
 
-        USCI_A_UART_initParam param = {0};
+  USCI_A_UART_initParam param = {0};
 
-        param.selectClockSource = USCI_A_UART_CLOCKSOURCE_SMCLK;
-        param.clockPrescalar = UART_PRESCALAR;
-        param.firstModReg = UART_FIRST_MOD;
-        param.secondModReg = UART_SECOND_MOD;
-        param.parity = USCI_A_UART_NO_PARITY;
-        param.msborLsbFirst = USCI_A_UART_LSB_FIRST;
-        param.numberofStopBits = USCI_A_UART_ONE_STOP_BIT;
-        param.uartMode = USCI_A_UART_MODE;
-        param.overSampling = USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION;
+  param.selectClockSource = USCI_A_UART_CLOCKSOURCE_SMCLK;
+  param.clockPrescalar = UART_PRESCALAR;
+  param.firstModReg = UART_FIRST_MOD;
+  param.secondModReg = UART_SECOND_MOD;
+  param.parity = USCI_A_UART_NO_PARITY;
+  param.msborLsbFirst = USCI_A_UART_LSB_FIRST;
+  param.numberofStopBits = USCI_A_UART_ONE_STOP_BIT;
+  param.uartMode = USCI_A_UART_MODE;
+  param.overSampling = USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION;
 
-        if (STATUS_FAIL == USCI_A_UART_init(USCI_A1_BASE, &param)) {
-            return;
-        }
+  if (STATUS_FAIL == USCI_A_UART_init(USCI_A1_BASE, &param)) {
+    return;
+  }
 
-        USCI_A_UART_enable(USCI_A1_BASE);
-        USCI_A_UART_clearInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
+  USCI_A_UART_enable(USCI_A1_BASE);
+  USCI_A_UART_clearInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
 
-        __enable_interrupt();                        // Enable interrupts globally
+  __enable_interrupt(); // Enable interrupts globally
 
-        USCI_A_UART_enableInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
+  USCI_A_UART_enableInterrupt(USCI_A1_BASE, USCI_A_UART_RECEIVE_INTERRUPT);
 
-        RINGBUF_init(&rx_ring, UartRcvBuf, BC_RXBUF_SIZE);
+  RINGBUF_init(&rx_ring, UartRcvBuf, BC_RXBUF_SIZE);
 }
 
-void UartSend(uint8_t* buf, uint16_t len)
-{
-    uint16_t i = 0;
+void UartSend(uint8_t *buf, uint16_t len) {
+  uint16_t i = 0;
 
-    while(i < len)
-    {
-        //Put the bit into the Transmit buffer, then increment i
-        UCA1TXBUF = *(buf+(i++));
+  while (i < len) {
+    // Put the bit into the Transmit buffer, then increment i
+    UCA1TXBUF = *(buf + (i++));
 
-        //Wait for each bit
-        while(!(UCTXIFG==(UCTXIFG & UCA1IFG))&&((UCA1STAT & UCBUSY) == UCBUSY));
-    }
+    // Wait for each bit
+    while (!(UCTXIFG == (UCTXIFG & UCA1IFG)) && ((UCA1STAT & UCBUSY) == UCBUSY))
+      ;
+  }
 }
 
-uint16_t UartReceive(uint8_t* buf, uint16_t len)
-{
-    uint16_t count;
+uint16_t UartReceive(uint8_t *buf, uint16_t len) {
+  uint16_t count;
 
-    if (len == 0) {
-        return 0;
-    }
+  if (len == 0) {
+    return 0;
+  }
 
-    UCA1IE &= ~UCRXIE;
+  UCA1IE &= ~UCRXIE;
 
-    count = RINGBUF_receiveDataInBuffer(&rx_ring, buf, len);
+  count = RINGBUF_receiveDataInBuffer(&rx_ring, buf, len);
 
-    //restore interrupts
-    UCA1IE |= UCRXIE;
+  // restore interrupts
+  UCA1IE |= UCRXIE;
 
-    return count;
+  return count;
 }
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector=USCI_A1_VECTOR
+#pragma vector = USCI_A1_VECTOR
 __interrupt void USCI_A1_ISR(void)
 #elif defined(__GNUC__)
-void __attribute__ ((interrupt(USCI_A1_VECTOR))) USCI_A1_ISR (void)
+void __attribute__((interrupt(USCI_A1_VECTOR))) USCI_A1_ISR(void)
 #else
 #error Compiler not supported!
 #endif
 {
-    switch(__even_in_range(UCA1IV,4))
-          {
-            case 0:break;
-            case 2:
-              RINGBUF_push(&rx_ring, UCA1RXBUF);
-             break;
-            case 4: break;
-            default: break;
-          }
+  switch (__even_in_range(UCA1IV, 4)) {
+  case 0:
+    break;
+  case 2:
+    RINGBUF_push(&rx_ring, UCA1RXBUF);
+    break;
+  case 4:
+    break;
+  default:
+    break;
+  }
 }
