@@ -112,6 +112,11 @@ volatile uint8_t bCDCDataReceived_event = FALSE; // Flag set by event handler to
                                                  // indicate data has been
                                                  // received into USB buffer
 
+volatile uint8_t bCDCBreak_event = 0; // Flag set by event handler to
+                                      // indicate break has been
+                                      // received by USB
+                                      // 0x01 for SET, 0x02 for CLEAR
+
 #define BUFFER_SIZE 128
 
 static uint8_t usbToUart[BUFFER_SIZE], uartToUsb[BUFFER_SIZE];
@@ -138,50 +143,18 @@ static void usb_passthrough() {
     }
   }
 
-  // Check the USB state and directly main loop accordingly
-  switch (USB_getConnectionState()) {
-  // This case is executed while your device is enumerated on the
-  // USB host
-  case ST_ENUM_ACTIVE:
-    hal_ext_led(3, 1);
-    hal_ext_led(1, 1);
-    hal_ext_uart(TRUE);
-    // Exit LPM because of a data-receive event, and
-    // fetch the received data
-    if (bCDCDataReceived_event) {
+  if (bCDCDataReceived_event) {
 
-      // Clear flag early -- just in case execution breaks
-      // below because of an error
-      bCDCDataReceived_event = FALSE;
+    // Clear flag early -- just in case execution breaks
+    // below because of an error
+    bCDCDataReceived_event = FALSE;
 
-      count = USBCDC_receiveDataInBuffer(usbToUart, BUFFER_SIZE, CDC0_INTFNUM);
-      // Count has the number of bytes received into dataBuffer
-      if (count) {
-        // Send the count to the UART
-        UartSend(usbToUart, count);
-      }
+    count = USBCDC_receiveDataInBuffer(usbToUart, BUFFER_SIZE, CDC0_INTFNUM);
+    // Count has the number of bytes received into dataBuffer
+    if (count) {
+      // Send the count to the UART
+      UartSend(usbToUart, count);
     }
-    break;
-
-  // These cases are executed while your device is disconnected from
-  // the host (meaning, not enumerated); enumerated but suspended
-  // by the host, or connected to a powered hub without a USB host
-  // present.
-  case ST_PHYS_DISCONNECTED:
-  case ST_ENUM_SUSPENDED:
-  case ST_PHYS_CONNECTED_NOENUM_SUSP:
-    __bis_SR_register(LPM3_bits + GIE);
-    _NOP();
-    break;
-
-  // The default is executed for the momentary state
-  // ST_ENUM_IN_PROGRESS.  Usually, this state only last a few
-  // seconds.  Be sure not to enter LPM3 in this state; USB
-  // communication is taking place here, and therefore the mode must
-  // be LPM0 or active-CPU.
-  case ST_ENUM_IN_PROGRESS:
-  default:
-    break;
   }
 }
 
@@ -205,7 +178,53 @@ void main(void) {
   hal_ext_uart(FALSE);
 
   while (1) {
-    usb_passthrough();
+    if (bCDCBreak_event == 3) {
+      // Reset CC1352R into BSL mode
+      bCDCBreak_event = 0;
+      hal_ext_led(2, 1);
+      hal_ext_reset(TRUE);
+      hal_ext_boot(TRUE);
+      __delay_cycles(2000);
+
+      hal_ext_reset(FALSE);
+      __delay_cycles(60000);
+      hal_ext_boot(FALSE);
+    }
+
+    // Check the USB state and directly main loop accordingly
+    switch (USB_getConnectionState()) {
+    // This case is executed while your device is enumerated on the
+    // USB host
+    case ST_ENUM_ACTIVE:
+      hal_ext_led(3, 1);
+      hal_ext_led(1, 1);
+      hal_ext_uart(TRUE);
+
+      usb_passthrough();
+
+      break;
+
+    // These cases are executed while your device is disconnected from
+    // the host (meaning, not enumerated); enumerated but suspended
+    // by the host, or connected to a powered hub without a USB host
+    // present.
+    case ST_PHYS_DISCONNECTED:
+    case ST_ENUM_SUSPENDED:
+    case ST_PHYS_CONNECTED_NOENUM_SUSP:
+      __bis_SR_register(LPM3_bits + GIE);
+      _NOP();
+      break;
+
+    // The default is executed for the momentary state
+    // ST_ENUM_IN_PROGRESS.  Usually, this state only last a few
+    // seconds.  Be sure not to enter LPM3 in this state; USB
+    // communication is taking place here, and therefore the mode must
+    // be LPM0 or active-CPU.
+    case ST_ENUM_IN_PROGRESS:
+    default:
+      break;
+    }
+
   } // while(1)
 } // main()
 

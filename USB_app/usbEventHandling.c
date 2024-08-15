@@ -59,6 +59,7 @@
 
 //These variables are only example, they are not needed for stack
 extern volatile uint8_t bCDCDataReceived_event;    //data received event
+extern volatile uint8_t bCDCBreak_event;   //break event
 
 /*
  * If this function gets executed, it's a sign that the output of the USB PLL has failed.
@@ -229,6 +230,19 @@ uint8_t USBCDC_handleSetLineCoding (uint8_t intfNum, uint32_t lBaudrate)
 uint8_t USBCDC_handleSetControlLineState (uint8_t intfNum, uint8_t lineState)
 {
 	return FALSE;
+}
+
+uint8_t USBCDC_handleBreak(uint8_t intfNum, uint8_t set)
+{
+    if(set == 0) {
+        if(bCDCBreak_event == 1) {
+            bCDCBreak_event = 3;
+            return TRUE;
+        }
+    } else {
+        bCDCBreak_event |= 1;
+    }
+    return FALSE;
 }
 
 #endif //_CDC_
