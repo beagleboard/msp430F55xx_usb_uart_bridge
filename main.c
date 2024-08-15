@@ -115,21 +115,83 @@ volatile uint8_t bCDCDataReceived_event = FALSE; // Flag set by event handler to
 #define BUFFER_SIZE 128
 
 static uint8_t usbToUart[BUFFER_SIZE], uartToUsb[BUFFER_SIZE];
+static uint16_t lastCount = 0;
+
+static void usb_passthrough() {
+  uint16_t bytesSent, count;
+  uint8_t ret;
+
+  if (lastCount) {
+    ret = USBCDC_sendData(uartToUsb, lastCount, CDC0_INTFNUM);
+    if (ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE) {
+      lastCount = 0;
+    }
+  } else if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent, &count) &
+               USBCDC_WAITING_FOR_SEND)) {
+    count = UartReceive(uartToUsb, BUFFER_SIZE);
+    ret = USBCDC_sendData(uartToUsb, count, CDC0_INTFNUM);
+    if (!(ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE)) {
+      lastCount = count;
+    }
+  }
+
+  // Check the USB state and directly main loop accordingly
+  switch (USB_getConnectionState()) {
+  // This case is executed while your device is enumerated on the
+  // USB host
+  case ST_ENUM_ACTIVE:
+    hal_ext_led(3, 1);
+    hal_ext_led(1, 1);
+    hal_ext_uart(TRUE);
+    // Exit LPM because of a data-receive event, and
+    // fetch the received data
+    if (bCDCDataReceived_event) {
+
+      // Clear flag early -- just in case execution breaks
+      // below because of an error
+      bCDCDataReceived_event = FALSE;
+
+      count = USBCDC_receiveDataInBuffer(usbToUart, BUFFER_SIZE, CDC0_INTFNUM);
+      // Count has the number of bytes received into dataBuffer
+      if (count) {
+        // Send the count to the UART
+        UartSend(usbToUart, count);
+      }
+    }
+    break;
+
+  // These cases are executed while your device is disconnected from
+  // the host (meaning, not enumerated); enumerated but suspended
+  // by the host, or connected to a powered hub without a USB host
+  // present.
+  case ST_PHYS_DISCONNECTED:
+  case ST_ENUM_SUSPENDED:
+  case ST_PHYS_CONNECTED_NOENUM_SUSP:
+    __bis_SR_register(LPM3_bits + GIE);
+    _NOP();
+    break;
+
+  // The default is executed for the momentary state
+  // ST_ENUM_IN_PROGRESS.  Usually, this state only last a few
+  // seconds.  Be sure not to enter LPM3 in this state; USB
+  // communication is taking place here, and therefore the mode must
+  // be LPM0 or active-CPU.
+  case ST_ENUM_IN_PROGRESS:
+  default:
+    break;
+  }
+}
 
 /*----------------------------------------------------------------------------+
  | Main Routine                                                                |
  +----------------------------------------------------------------------------*/
 void main(void) {
-  uint16_t count;
-  uint16_t bytesSent, bytesReceived, lastCount = 0;
-  uint8_t ret;
-
   WDT_A_hold(WDT_A_BASE); // Stop watchdog timer
 
   PMM_setVCore(PMM_CORE_LEVEL_3); // Minimum Vcore setting required for the USB
                                   // API is PMM_CORE_LEVEL_2 . Need
                                   // PMM_CORE_LEVEL_3 for 24MHz clock speed
-  USBHAL_initPorts(); // Config GPIOS for low-power (output low)
+  USBHAL_initPorts();             // Config GPIOS for low-power (output low)
   USBHAL_initClocks(
       24000000); // Config clocks. MCLK=SMCLK=FLL=24MHz; ACLK=REFO=32kHz
   // hal_ext_i2c();
@@ -140,66 +202,7 @@ void main(void) {
   hal_ext_uart(FALSE);
 
   while (1) {
-    if (lastCount) {
-      ret = USBCDC_sendData(uartToUsb, lastCount, CDC0_INTFNUM);
-      if (ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE) {
-        lastCount = 0;
-      }
-    } else if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent,
-                                           &bytesReceived) &
-                 USBCDC_WAITING_FOR_SEND)) {
-      count = UartReceive(uartToUsb, BUFFER_SIZE);
-      ret = USBCDC_sendData(uartToUsb, count, CDC0_INTFNUM);
-      if (!(ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE)) {
-        lastCount = count;
-      }
-    }
-
-    // Check the USB state and directly main loop accordingly
-    switch (USB_getConnectionState()) {
-    // This case is executed while your device is enumerated on the
-    // USB host
-    case ST_ENUM_ACTIVE:
-      hal_ext_led(3, 1);
-      hal_ext_uart(TRUE);
-      // Exit LPM because of a data-receive event, and
-      // fetch the received data
-      if (bCDCDataReceived_event) {
-
-        // Clear flag early -- just in case execution breaks
-        // below because of an error
-        bCDCDataReceived_event = FALSE;
-
-        count =
-            USBCDC_receiveDataInBuffer(usbToUart, BUFFER_SIZE, CDC0_INTFNUM);
-        // Count has the number of bytes received into dataBuffer
-        if (count) {
-          // Send the count to the UART
-          UartSend(usbToUart, count);
-        }
-      }
-      break;
-
-    // These cases are executed while your device is disconnected from
-    // the host (meaning, not enumerated); enumerated but suspended
-    // by the host, or connected to a powered hub without a USB host
-    // present.
-    case ST_PHYS_DISCONNECTED:
-    case ST_ENUM_SUSPENDED:
-    case ST_PHYS_CONNECTED_NOENUM_SUSP:
-      __bis_SR_register(LPM3_bits + GIE);
-      _NOP();
-      break;
-
-    // The default is executed for the momentary state
-    // ST_ENUM_IN_PROGRESS.  Usually, this state only last a few
-    // seconds.  Be sure not to enter LPM3 in this state; USB
-    // communication is taking place here, and therefore the mode must
-    // be LPM0 or active-CPU.
-    case ST_ENUM_IN_PROGRESS:
-    default:;
-    }
-
+    usb_passthrough();
   } // while(1)
 } // main()
 
