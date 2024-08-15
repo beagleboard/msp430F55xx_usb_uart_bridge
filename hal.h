@@ -63,6 +63,8 @@
 enum i2c_cmd {
   BUZZER_SHORT = 0,
   BUZZER_LONG,
+  BUZZER_ON,
+  BUZZER_OFF,
   LED1_ON,
   LED1_OFF,
   LED2_ON,

@@ -226,6 +226,12 @@ void hal_ext_i2c_handle(enum i2c_cmd cmd) {
   case BUZZER_LONG:
     hal_ext_buzzer(1);
     break;
+  case BUZZER_ON:
+    hal_ext_buzzer(3);
+    break;
+  case BUZZER_OFF:
+    hal_ext_buzzer(2);
+    break;
   case LED1_ON:
     hal_ext_led(1, 1);
     break;
