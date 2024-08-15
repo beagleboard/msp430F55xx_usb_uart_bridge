@@ -121,16 +121,19 @@ static void usb_passthrough() {
   uint16_t bytesSent, count;
   uint8_t ret;
 
-  if (lastCount) {
-    ret = USBCDC_sendData(uartToUsb, lastCount, CDC0_INTFNUM);
+  if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent, &count) &
+        USBCDC_WAITING_FOR_SEND)) {
+    // Retry last send operation if it failed
+    if (lastCount) {
+      count = lastCount;
+    } else {
+      count = UartReceive(uartToUsb, BUFFER_SIZE);
+    }
+
+    ret = USBCDC_sendData(uartToUsb, count, CDC0_INTFNUM);
     if (ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE) {
       lastCount = 0;
-    }
-  } else if (!(USBCDC_getInterfaceStatus(CDC0_INTFNUM, &bytesSent, &count) &
-               USBCDC_WAITING_FOR_SEND)) {
-    count = UartReceive(uartToUsb, BUFFER_SIZE);
-    ret = USBCDC_sendData(uartToUsb, count, CDC0_INTFNUM);
-    if (!(ret == USBCDC_SEND_STARTED || ret == USBCDC_SEND_COMPLETE)) {
+    } else {
       lastCount = count;
     }
   }
