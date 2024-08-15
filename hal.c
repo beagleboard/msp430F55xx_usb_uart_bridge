@@ -185,10 +185,101 @@ void hal_ext_i2c(void) {
   USCI_B_I2C_enable(USCI_B1_BASE);
 
   // Enable receive interrupt
-  USCI_B_I2C_clearInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT +
-                                              USCI_B_I2C_RECEIVE_INTERRUPT +
+  USCI_B_I2C_clearInterrupt(USCI_B1_BASE, USCI_B_I2C_RECEIVE_INTERRUPT +
                                               USCI_B_I2C_STOP_INTERRUPT);
-  USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_TRANSMIT_INTERRUPT +
-                                               USCI_B_I2C_RECEIVE_INTERRUPT +
+  USCI_B_I2C_enableInterrupt(USCI_B1_BASE, USCI_B_I2C_RECEIVE_INTERRUPT +
                                                USCI_B_I2C_STOP_INTERRUPT);
+}
+
+void hal_ext_buzzer(int state) {
+  switch (state) {
+  case 0: /* Buzz short and high */
+    for (int i = 0; i < 5; i++) {
+      GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
+      __delay_cycles(100);
+      GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+      __delay_cycles(100);
+    }
+    break;
+  case 1: /* Buzz medium */
+    for (int i = 0; i < 20; i++) {
+      GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
+      __delay_cycles(10000);
+      GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+      __delay_cycles(10000);
+    }
+    break;
+  case 2: /* Off */
+    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
+    break;
+  case 3: /* On */
+    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
+    break;
+  }
+}
+
+void hal_ext_i2c_handle(enum i2c_cmd cmd) {
+  switch (cmd) {
+  case BUZZER_SHORT:
+    hal_ext_buzzer(0);
+    break;
+  case BUZZER_LONG:
+    hal_ext_buzzer(1);
+    break;
+  case LED1_ON:
+    hal_ext_led(1, 1);
+    break;
+  case LED1_OFF:
+    hal_ext_led(1, 0);
+    break;
+  case LED2_ON:
+    hal_ext_led(2, 1);
+    break;
+  case LED2_OFF:
+    hal_ext_led(2, 0);
+    break;
+  case LED3_ON:
+    hal_ext_led(3, 1);
+    break;
+  case LED3_OFF:
+    hal_ext_led(3, 0);
+    break;
+  default:
+    break;
+  }
+}
+
+//******************************************************************************
+//
+// This is the USCI_B0 interrupt vector service routine.
+//
+//******************************************************************************
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector = USCI_B1_VECTOR
+__interrupt void USCI_B1_ISR(void)
+#elif defined(__GNUC__)
+void __attribute__((interrupt(USCI_B1_VECTOR))) USCI_B1_ISR(void)
+#endif
+{
+  switch (__even_in_range(UCB1IV, 12)) {
+  case USCI_I2C_UCSTPIFG:
+    // Exit LPM0 if data was transmitted
+    __bic_SR_register_on_exit(LPM0_bits);
+    __no_operation();
+    break;
+  case USCI_I2C_UCNACKIFG: // NAK received (master only)
+    __no_operation();
+    break;
+  // Vector 10: Data received - RXIFG
+  case USCI_I2C_UCRXIFG: {
+    // Get received data
+    uint8_t bytesReceived = USCI_B_I2C_slaveGetData(USCI_B1_BASE);
+    hal_ext_i2c_handle(bytesReceived);
+    break;
+  }
+  case USCI_I2C_UCTXIFG:
+    break;
+  default:
+    break;
+  }
 }

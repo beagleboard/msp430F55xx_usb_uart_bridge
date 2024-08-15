@@ -172,16 +172,22 @@ static void usb_passthrough() {
 void main(void) {
   WDT_A_hold(WDT_A_BASE); // Stop watchdog timer
 
-  PMM_setVCore(PMM_CORE_LEVEL_3); // Minimum Vcore setting required for the USB
-                                  // API is PMM_CORE_LEVEL_2 . Need
-                                  // PMM_CORE_LEVEL_3 for 24MHz clock speed
-  USBHAL_initPorts();             // Config GPIOS for low-power (output low)
-  USBHAL_initClocks(
-      24000000); // Config clocks. MCLK=SMCLK=FLL=24MHz; ACLK=REFO=32kHz
-  // hal_ext_i2c();
-  USB_setup(TRUE, TRUE); // Init USB & events; if a host is present, connect
+  // Minimum Vcore setting required for the USB
+  // API is PMM_CORE_LEVEL_2 . Need
+  // PMM_CORE_LEVEL_3 for 24MHz clock speed
+  PMM_setVCore(PMM_CORE_LEVEL_3);
+  // Config GPIOS for low-power (output low)
+  USBHAL_initPorts();
+
+  // Config clocks. MCLK=SMCLK=FLL=24MHz; ACLK=REFO=32kHz
+  USBHAL_initClocks(24000000);
+  // Init USB & events; if a host is present, connect
+  USB_setup(TRUE, TRUE);
   UartInit();
 
+  // Play on boot
+  hal_ext_buzzer(1);
+  hal_ext_i2c();
   hal_ext_led(3, 0);
   hal_ext_uart(FALSE);
 

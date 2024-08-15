@@ -48,6 +48,29 @@
 
 #define SLAVE_ADDRESS 0x04
 
+/*
+ * enum i2c_cmd: Commands to communicate with cc1352 over i2c
+ *
+ * @BUZZER_SHORT: Short buzz
+ * @BUZZER_LONG: Long buzz
+ * @LED1_ON: Start LED1
+ * @LED1_OFF: Stop LED1
+ * @LED2_ON: Start LED2
+ * @LED2_OFF: Stop LED2
+ * @LED3_ON: Start LED3
+ * @LED3_OFF: Stop LED3
+ */
+enum i2c_cmd {
+  BUZZER_SHORT = 0,
+  BUZZER_LONG,
+  LED1_ON,
+  LED1_OFF,
+  LED2_ON,
+  LED2_OFF,
+  LED3_ON,
+  LED3_OFF,
+};
+
 void USBHAL_initPorts(void);
 void USBHAL_initClocks(uint32_t mclkFreq);
 // Released_Version_5_20_06_02
@@ -100,3 +123,5 @@ void hal_ext_uart(uint8_t active);
 void hal_ext_led(int led, int state);
 
 void hal_ext_i2c(void);
+
+void hal_ext_buzzer(int state);
