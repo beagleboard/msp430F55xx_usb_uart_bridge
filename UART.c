@@ -52,16 +52,6 @@ static ringbuf_t rx_ring;
 
 // Initializes the Uart
 void UartInit(void) {
-  // P4SEL |= BIT4+BIT5;                          // P4.4,5 = USCI_A1 TXD/RXD
-  // UCA1CTL1 |= UCSWRST;                         // **Put state machine in
-  // reset** UCA1CTL1 |= UCSSEL_2;                        // SMCLK UCA1BR0 =
-  // UCA1_BR0;                          // 24MHz / 16 / 9600 (see User's Guide)
-  // UCA1BR1 = UCA1_BR1;
-  // UCA1MCTL |= UCA1_OS | UCA1_BRF | UCA1_BRS;   // Modulation UCBRSx=0,
-  // UCBRFx=4 UCA1CTL1 &= ~UCSWRST;                        // **Initialize USCI
-  // state machine** UCA1IE |= UCRXIE;                            // Enable
-  // USCI_A1 RX interrupt
-
   USCI_A_UART_initParam param = {0};
 
   param.selectClockSource = USCI_A_UART_CLOCKSOURCE_SMCLK;
