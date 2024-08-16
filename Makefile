@@ -16,6 +16,7 @@ driverlib/MSP430F5xx_6xx/usci_a_uart.o \
 driverlib/MSP430F5xx_6xx/usci_b_i2c.o \
 driverlib/MSP430F5xx_6xx/crc.o \
 driverlib/MSP430F5xx_6xx/wdt_a.o \
+driverlib/MSP430F5xx_6xx/timer_a.o \
 USB_API/USB_CDC_API/UsbCdc.o \
 USB_API/USB_Common/usb.o \
 USB_API/USB_Common/usbdma.o \

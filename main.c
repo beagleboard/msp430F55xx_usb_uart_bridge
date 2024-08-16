@@ -185,8 +185,6 @@ void main(void) {
   USB_setup(TRUE, TRUE);
   UartInit();
 
-  // Play on boot
-  hal_ext_buzzer(1);
   hal_ext_i2c();
   hal_ext_led(3, 0);
   hal_ext_uart(FALSE);

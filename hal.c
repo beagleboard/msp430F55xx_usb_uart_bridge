@@ -191,46 +191,51 @@ void hal_ext_i2c(void) {
                                                USCI_B_I2C_STOP_INTERRUPT);
 }
 
-void hal_ext_buzzer(int state) {
-  switch (state) {
-  case 0: /* Buzz short and high */
-    for (int i = 0; i < 5; i++) {
-      GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
-      __delay_cycles(100);
-      GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
-      __delay_cycles(100);
-    }
-    break;
-  case 1: /* Buzz medium */
-    for (int i = 0; i < 20; i++) {
-      GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
-      __delay_cycles(10000);
-      GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
-      __delay_cycles(10000);
-    }
-    break;
-  case 2: /* Off */
-    GPIO_setOutputHighOnPin(GPIO_PORT_P4, GPIO_PIN3);
-    break;
-  case 3: /* On */
-    GPIO_setOutputLowOnPin(GPIO_PORT_P4, GPIO_PIN3);
-    break;
-  }
+static volatile uint16_t buzz_freq = 0;
+
+void hal_ext_buzzer_tone(uint16_t freq) {
+  buzz_freq = freq;
+
+  // Start timer in continuous mode sourced by SMCLK
+  Timer_A_initContinuousModeParam initContParam = {0};
+  initContParam.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+  initContParam.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+  initContParam.timerInterruptEnable_TAIE = TIMER_A_TAIE_INTERRUPT_DISABLE;
+  initContParam.timerClear = TIMER_A_DO_CLEAR;
+  initContParam.startTimer = false;
+  Timer_A_initContinuousMode(TIMER_A1_BASE, &initContParam);
+
+  // Initiaze compare mode
+  Timer_A_clearCaptureCompareInterrupt(TIMER_A1_BASE,
+                                       TIMER_A_CAPTURECOMPARE_REGISTER_0);
+
+  Timer_A_initCompareModeParam initCompParam = {0};
+  initCompParam.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_0;
+  initCompParam.compareInterruptEnable =
+      TIMER_A_CAPTURECOMPARE_INTERRUPT_ENABLE;
+  initCompParam.compareOutputMode = TIMER_A_OUTPUTMODE_OUTBITVALUE;
+  initCompParam.compareValue = buzz_freq;
+  Timer_A_initCompareMode(TIMER_A1_BASE, &initCompParam);
+
+  Timer_A_startCounter(TIMER_A1_BASE, TIMER_A_CONTINUOUS_MODE);
+}
+
+void hal_ext_buzzer_notone(void) {
+  Timer_A_stop(TIMER_A1_BASE);
+  buzz_freq = 0;
 }
 
 void hal_ext_i2c_handle(enum i2c_cmd cmd) {
+  uint16_t freq;
+
   switch (cmd) {
-  case BUZZER_SHORT:
-    hal_ext_buzzer(0);
-    break;
-  case BUZZER_LONG:
-    hal_ext_buzzer(1);
+  case BUZZER_OFF:
+    hal_ext_buzzer_notone();
     break;
   case BUZZER_ON:
-    hal_ext_buzzer(3);
-    break;
-  case BUZZER_OFF:
-    hal_ext_buzzer(2);
+    freq = (USCI_B_I2C_slaveGetData(USCI_B1_BASE) << sizeof(uint8_t));
+    freq &= USCI_B_I2C_slaveGetData(USCI_B1_BASE);
+    hal_ext_buzzer_tone(freq);
     break;
   case LED1_ON:
     hal_ext_led(1, 1);
@@ -288,4 +293,23 @@ void __attribute__((interrupt(USCI_B1_VECTOR))) USCI_B1_ISR(void)
   default:
     break;
   }
+}
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector = TIMER1_A0_VECTOR
+__interrupt void TIMER1_A0_ISR(void)
+#elif defined(__GNUC__)
+__attribute__((interrupt(TIMER1_A0_VECTOR))) void TIMER1_A0_ISR(void)
+#endif
+{
+  uint16_t compVal = Timer_A_getCaptureCompareCount(
+                         TIMER_A1_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0) +
+                     buzz_freq;
+
+  // Toggle P1.0
+  GPIO_toggleOutputOnPin(GPIO_PORT_P4, GPIO_PIN3);
+
+  // Add Offset to CCR0
+  Timer_A_setCompareValue(TIMER_A1_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0,
+                          compVal);
 }
