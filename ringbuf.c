@@ -93,12 +93,12 @@ uint16_t RINGBUF_getBytesInBuffer(ringbuf_t *ring)
 
 uint16_t RINGBUF_receiveDataInBuffer(ringbuf_t *ring, uint8_t* buffer, uint16_t count)
 {
-    uint16_t numBytes = RINGBUF_getBytesInBuffer(ring);
+    uint16_t i, numBytes = RINGBUF_getBytesInBuffer(ring);
     uint8_t *wrBuffer = buffer;
     if(numBytes > count) {
         numBytes = count;
     }
-    for(int i=numBytes;i;i--) {
+    for (i = numBytes; i > 0; i--) {
         *wrBuffer++ = ring->buffer[ring->tail];
         ring->tail = NEXT(ring->tail, ring->size);
     }

@@ -84,16 +84,16 @@ extern "C"
 
 
 #ifdef _CDC_
-typedef struct {
+typedef struct CdcWrite {
     uint16_t nCdcBytesToSend;                       //holds counter of bytes to be sent
     uint16_t nCdcBytesToSendLeft;                   //holds counter how many bytes is still to be sent
     const uint8_t* pUsbBufferToSend;               //holds the buffer with data to be sent
     uint8_t bCurrentBufferXY;                      //is 0 if current buffer to write data is X, or 1 if current buffer is Y
     uint8_t bZeroPacketSent;                       //= FALSE;
     uint8_t last_ByteSend;
-} CdcWrite;
+};
 
-typedef struct {
+struct CdcRead {
     uint8_t *pUserBuffer;                          //holds the current position of user's receiving buffer. If NULL- no receiving
                                                 //operation started
     uint8_t *pCurrentEpPos;                        //current positon to read of received data from curent EP
@@ -104,10 +104,11 @@ typedef struct {
     uint8_t * pEP2;                                //holds addr of the next EP buffer
     uint8_t nBytesInEp;                            //how many received bytes still available in current EP
     uint8_t bCurrentBufferXY;                      //indicates which buffer is used by host to transmit data via OUT endpoint3
-} CdcRead;
+};
 
-extern CdcWrite CdcWriteCtrl[CDC_NUM_INTERFACES];
-extern CdcRead CdcReadCtrl[CDC_NUM_INTERFACES];
+extern struct CdcWrite CdcWriteCtrl[CDC_NUM_INTERFACES];
+extern struct CdcRead CdcReadCtrl[CDC_NUM_INTERFACES];
+
 #endif
 
 /*----------------------------------------------------------------------------

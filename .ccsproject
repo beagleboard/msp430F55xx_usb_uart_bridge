@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <?ccsproject version="1.0"?>
 <projectOptions>
-	<ccsVersion value="10.0.0"/>
-	<deviceVariant value="MSP430F5503"/>
+	<ccsVariant value="50:Theia-based"/>
+	<ccsVersion value="51.4.0"/>
 	<deviceFamily value="MSP430"/>
-	<deviceEndianness value="little"/>
-	<codegenToolVersion value="20.2.1.LTS"/>
-	<isElfFormat value="true"/>
-	<connection value="common/targetdb/connections/TIMSP430-USB.xml"/>
-	<linkerCommandFile value="lnk_msp430f5503.cmd"/>
-	<rts value="libc.a"/>
 	<createSlaveProjects value=""/>
-	<templateProperties value="id=com.ti.common.project.core.emptyProjectWithMainTemplate_msp430"/>
+	<templateProperties value="id=usb_to_uart_bridge_gui_ccs.projectspec.USB_To_UART_Bridge"/>
+	<connection value="common/targetdb/connections/TIMSP430-USB.xml"/>
+	<activeTargetConfiguration value="targetConfigs/MSP430F5503.ccxml"/>
+	<origin value="/mnt/tirex-content/housekeeping_example_pack_1_00_08/examples/usb_to_uart_bridge/CCS/usb_to_uart_bridge_gui_ccs.projectspec"/>
 	<filesToOpen value="main.c"/>
-	<isTargetManual value="false"/>
+	<isTargetConfigurationManual value="true"/>
 </projectOptions>
