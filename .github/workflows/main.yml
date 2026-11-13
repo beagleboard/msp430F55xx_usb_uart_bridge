@@ -48,10 +48,17 @@ jobs:
           name: usb-uart-bridge
           path: usb_uart_bridge.*
 
+      - name: Generate os_list.json
+        if: github.ref_type == 'tag'
+        run: |
+          xz -9 usb_uart_bridge.hex
+          python3 tools/gen-os-list.py "$GITHUB_REF_NAME"
+
       - name: Create release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: |
-            usb_uart_bridge.hex
+            usb_uart_bridge.hex.xz
+            os_list.json
